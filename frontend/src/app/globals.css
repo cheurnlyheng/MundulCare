@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+:root {
+  --font-figtree: 'Figtree', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Client Theme (Plum Berry Rose #aa5588) */
+  --client-primary: #aa5588;
+  --client-primary-hover: #924472;
+  --client-primary-subtle: #fbf5f8;
+  --client-primary-border: #edd5e3;
+  --client-primary-ring: rgba(170, 85, 136, 0.18);
+
+  /* Admin Theme (Executive Royal Violet #6D28D9 & Midnight Slate #0B0F19) */
+  --admin-primary: #6D28D9;
+  --admin-primary-hover: #5b21b6;
+  --admin-primary-subtle: #f5f3ff;
+  --admin-primary-border: #ddd6fe;
+  --admin-primary-ring: rgba(109, 40, 217, 0.18);
+  --admin-sidebar-bg: #0B0F19;
+  --admin-sidebar-border: #1e293b;
+}
+
+@theme inline {
+  --font-sans: var(--font-figtree);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-figtree), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Tabular numbers for price tags, dates, and times */
+.font-tabular {
+  font-feature-settings: "tnum" 1;
+}
+
+/* AI Symptom Matcher: gentle float + a breathing contact shadow beneath the card */
+@keyframes ai-card-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+@keyframes ai-card-shadow {
+  0%, 100% { opacity: 0.3; transform: translateX(-50%) scaleX(1); }
+  50% { opacity: 0.14; transform: translateX(-50%) scaleX(0.88); }
+}
+
+/* Soft shifting glow halo behind the card, for a "premium AI feature" feel */
+@keyframes ai-glow-shift {
+  0%, 100% { opacity: 0.16; }
+  50% { opacity: 0.32; }
+}
+
+/* Light glint sweeping across the badge pill / CTA button, to catch the eye */
+@keyframes ai-shimmer-sweep {
+  0% { background-position: -140% 0; }
+  55%, 100% { background-position: 240% 0; }
+}
+
+.ai-card-float {
+  animation: ai-card-float 6s ease-in-out infinite;
+}
+
+.ai-card-shadow {
+  animation: ai-card-shadow 6s ease-in-out infinite;
+}
+
+.ai-card-glow {
+  background: conic-gradient(from 180deg, #aa5588, #f0d9a8, #edd5e3, #aa5588);
+  filter: blur(30px);
+  animation: ai-glow-shift 5s ease-in-out infinite;
+}
+
+.ai-shimmer {
+  background-image: linear-gradient(110deg, transparent 40%, rgba(255, 255, 255, 0.85) 50%, transparent 60%);
+  background-size: 250% 100%;
+  animation: ai-shimmer-sweep 3.5s ease-in-out infinite;
+}
+
