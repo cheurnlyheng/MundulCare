@@ -73,6 +73,7 @@ There's no `application.properties` inside the image on purpose (it's gitignored
 | `SPRING_MAIL_USERNAME` | Gmail address |
 | `SPRING_MAIL_PASSWORD` | Gmail [App Password](https://myaccount.google.com/apppasswords) |
 | `JWT_SECRET` | a fresh long random string - **don't reuse your local dev secret** |
+| `JWT_EXPIRATION` | `86400000` (24 hours, in milliseconds) |
 | `GEMINI_API_KEY` | from [Google AI Studio](https://aistudio.google.com/apikey) |
 | `GOOGLE_CLIENT_ID` | OAuth Client ID (add the deployed frontend URL as an Authorized JavaScript origin too) |
 | `APP_CORS_ALLOWED_ORIGINS` | your deployed frontend URL, e.g. `https://your-frontend.example.com` |
