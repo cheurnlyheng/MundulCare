@@ -133,7 +133,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex items-center justify-between">
             <div>
               <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Medical Staff
+                Doctors
               </span>
               <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 block font-tabular">
                 {doctors.length}
@@ -163,7 +163,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex items-center justify-between">
             <div>
               <span className="block text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Confirmed Visits
+                Completed
               </span>
               <span className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1 block font-tabular">
                 {confirmedCount + completedCount}

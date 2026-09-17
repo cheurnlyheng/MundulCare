@@ -28,6 +28,9 @@ public class AppointmentResponse {
     private String patientName;
     private String patientEmail;
     private String patientPhone;
+    private int patientNoShowCount;
+    private int patientCancelCount;
+    private boolean patientBookingLocked;
 
     // Appointment info
     @JsonFormat(pattern = "yyyy-MM-dd")

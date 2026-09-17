@@ -18,6 +18,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -37,7 +38,12 @@ public class AiSymptomServiceImpl implements AiSymptomService {
     @Value("${gemini.api.key:}")
     private String geminiApiKey;
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=";
+    // The free tier caps each Flash model at 5 requests/min and 20/day *per model* -
+    // gemini-3.6-flash is already over quota (429) and gemini-3.7-flash is currently
+    // 503-ing under high demand. This task is one-sentence classification, not
+    // something that needs the flagship model, so "flash-lite-latest" (the lightweight,
+    // auto-updating alias) fits both the task and today's quota headroom better.
+    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-lite-latest:generateContent?key=";
 
     @Override
     public SymptomMatchResponse matchSymptoms(SymptomMatchRequest request) {
@@ -116,7 +122,7 @@ public class AiSymptomServiceImpl implements AiSymptomService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
-        String response = restTemplate.postForObject(GEMINI_API_URL + geminiApiKey, entity, String.class);
+        String response = postWithRetry(entity);
 
         JsonNode root = objectMapper.readTree(response);
         String text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text").asText().trim();
@@ -136,6 +142,24 @@ public class AiSymptomServiceImpl implements AiSymptomService {
         result.put("specialty", jsonResult.path("specialty").asText("General Medicine"));
         result.put("explanation", jsonResult.path("explanation").asText());
         return result;
+    }
+
+    // Gemini's 5xx responses are explicitly documented as transient ("spikes in demand are
+    // usually temporary") - one retry after a short pause avoids falling back to General
+    // Medicine over a momentary blip. 4xx errors (bad key, bad request) are not retried,
+    // since retrying can't fix those.
+    private String postWithRetry(HttpEntity<Map<String, Object>> entity) throws Exception {
+        final int maxAttempts = 2;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return restTemplate.postForObject(GEMINI_API_URL + geminiApiKey, entity, String.class);
+            } catch (HttpServerErrorException e) {
+                if (attempt == maxAttempts) throw e;
+                log.warn("Gemini API returned {} (attempt {}/{}), retrying...", e.getStatusCode(), attempt, maxAttempts);
+                Thread.sleep(1000);
+            }
+        }
+        throw new IllegalStateException("unreachable");
     }
 
 }

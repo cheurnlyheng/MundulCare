@@ -13,15 +13,16 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserProfileResponse {
+public class AdminUserResponse {
     private Long id;
     private String name;
     private String email;
     private String phone;
-    private String profileImage;
     private Role role;
     private AuthProvider authProvider;
-    private Boolean isVerified;
-    private boolean hasPassword;
+    private boolean isVerified;
+    private int noShowCount;
+    private int cancelCount;
+    private boolean bookingLocked;
     private LocalDateTime createdAt;
 }

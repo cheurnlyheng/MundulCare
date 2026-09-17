@@ -7,9 +7,11 @@ import {
   LayoutDashboard,
   CalendarCheck,
   UserCheck,
+  Users,
   Layers,
   History,
   Settings,
+  ShieldOff,
   ArrowLeft,
   Menu,
   X,
@@ -24,6 +26,8 @@ export default function AdminSidebar() {
     { name: 'Appointments', href: '/admin/appointments', icon: CalendarCheck },
     { name: 'Doctors & Schedules', href: '/admin/doctors', icon: UserCheck },
     { name: 'Departments', href: '/admin/specialties', icon: Layers },
+    { name: 'User Management', href: '/admin/users', icon: Users },
+    { name: 'Blacklist', href: '/admin/blacklist', icon: ShieldOff },
     { name: 'Audit Log', href: '/admin/audit-logs', icon: History },
     { name: 'System Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -84,8 +88,8 @@ export default function AdminSidebar() {
         </button>
       </div>
 
-      {/* Desktop Fixed Sidebar */}
-      <aside className="hidden lg:flex w-64 bg-white min-h-[calc(100vh-64px)] flex-col border-r border-slate-200 shrink-0 select-none">
+      {/* Desktop Sidebar - sticky so it stays in view on pages taller than the viewport */}
+      <aside className="hidden lg:flex w-64 bg-white h-[calc(100vh-4rem)] sticky top-16 self-start flex-col border-r border-slate-200 shrink-0 select-none overflow-y-auto">
         {sidebarContent}
       </aside>
 

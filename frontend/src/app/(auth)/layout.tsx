@@ -1,10 +1,32 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
-import { Stethoscope } from 'lucide-react';
+import { usePathname } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
+
+// Where the top-left back arrow points, per auth route. Pages not listed here get none.
+const BACK_LINKS: Record<string, { href: string; label: string }> = {
+  '/login': { href: '/', label: 'Back to Home' },
+  '/register': { href: '/login', label: 'Back to Sign In' },
+};
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const backLink = BACK_LINKS[pathname];
+
   return (
     <div className="min-h-screen bg-[#FDF9FB] flex flex-col justify-center py-12 sm:px-6 lg:px-8 selection:bg-[#aa5588] selection:text-white">
+      {backLink && (
+        <Link
+          href={backLink.href}
+           className="fixed top-8 left-8 sm:top-10 sm:left-10 z-10 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-[#aa5588] transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>{backLink.label}</span>
+        </Link>
+      )}
+
       {/* Brand Header */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center mb-6">
         <Link href="/" className="inline-flex items-center gap-3 group">

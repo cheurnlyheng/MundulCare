@@ -12,6 +12,11 @@ public interface DoctorService {
     DoctorResponse getDoctorById(Long id);
     DoctorResponse createDoctor(DoctorRequest request);
     DoctorResponse updateDoctor(Long id, DoctorRequest request);
+
+    // Activate/deactivate only - doesn't touch specialties, so it works even for a doctor
+    // left with zero specialties (e.g. after their only department was deleted).
+    DoctorResponse setActiveStatus(Long id, boolean active);
+
     void deleteDoctor(Long id);
     String uploadProfileImage(Long doctorId, MultipartFile file);
     void deleteProfileImage(Long doctorId);

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { AuthResponse, Role } from '@/types/auth';
+import { AuthProvider as AuthProviderType, AuthResponse, Role } from '@/types/auth';
 
 interface CurrentUser {
   userId: number;
@@ -9,6 +9,7 @@ interface CurrentUser {
   email: string;
   role: Role;
   profileImage?: string;
+  authProvider: AuthProviderType;
 }
 
 interface AuthContextType {
@@ -53,6 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email: authData.email,
       role: authData.role,
       profileImage: authData.profileImage,
+      authProvider: authData.authProvider,
     };
     setUser(userData);
     localStorage.setItem('token', authData.token);

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { History, Loader2, AlertCircle, User, Search, Filter } from 'lucide-react';
+import { History, Loader2, AlertCircle, User, Search, Filter, Download } from 'lucide-react';
 import AdminHeader from '@/components/AdminHeader';
 import AdminSidebar from '@/components/AdminSidebar';
 import Pagination from '@/components/Pagination';
@@ -20,7 +20,9 @@ export default function AdminAuditLogsPage() {
 
   // Filters
   const [search, setSearch] = useState('');
-  const [actionFilter, setActionFilter] = useState<'ALL' | 'CREATED' | 'UPDATED' | 'DELETED'>('ALL');
+  const [actionFilter, setActionFilter] = useState<
+    'ALL' | 'CREATED' | 'UPDATED' | 'DELETED' | 'LOCKED' | 'UNLOCKED'
+  >('ALL');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 8;
 
@@ -44,6 +46,14 @@ export default function AdminAuditLogsPage() {
       }
     }
   }, [isAuthenticated, user, authLoading]);
+
+  const handleExportCsv = async () => {
+    try {
+      await auditLogApi.exportCsv();
+    } catch (err) {
+      alert('Failed to export CSV. Please check system permissions.');
+    }
+  };
 
   const actionBadgeColor = () => 'bg-slate-100 text-slate-700 border-slate-200/80';
 
@@ -93,9 +103,19 @@ export default function AdminAuditLogsPage() {
               A chronological audit record of administrative operations and changes across the hospital.
             </p>
           </div>
-          <span className="text-sm text-slate-500 font-semibold font-tabular">
-            {filteredLogs.length} of {logs.length} Total Records
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-slate-500 font-semibold font-tabular">
+              {filteredLogs.length} of {logs.length} Total Records
+            </span>
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 font-semibold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all shadow-xs cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-[#6D28D9]" />
+              <span>Export CSV Report</span>
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -107,7 +127,7 @@ export default function AdminAuditLogsPage() {
 
         {/* Filter & Search Bar */}
         <div className="bg-white rounded-2xl border border-slate-200/90 p-4 mb-6 shadow-xs flex flex-col sm:flex-row gap-3 items-center justify-between">
-          <div className="relative w-full sm:w-80">
+          <div className="relative w-full sm:flex-1">
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -119,7 +139,7 @@ export default function AdminAuditLogsPage() {
           </div>
 
           <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto bg-slate-100 p-1 rounded-2xl">
-            {(['ALL', 'CREATED', 'UPDATED', 'DELETED'] as const).map((filter) => (
+            {(['ALL', 'CREATED', 'UPDATED', 'DELETED', 'LOCKED', 'UNLOCKED'] as const).map((filter) => (
               <button
                 key={filter}
                 type="button"
@@ -174,8 +194,12 @@ export default function AdminAuditLogsPage() {
                         <p className="text-slate-800 text-sm leading-relaxed">{entry.details}</p>
                       </td>
                       <td className="py-3.5 px-4 whitespace-nowrap text-xs text-slate-400 font-tabular">
-                        {new Date(entry.createdAt).toLocaleString()}
-                      </td>
+  {new Date(entry.createdAt).toLocaleDateString()}{" "}
+  {new Date(entry.createdAt).toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}
+</td>
                     </tr>
                   ))
                 ) : (

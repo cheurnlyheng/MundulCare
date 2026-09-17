@@ -177,6 +177,16 @@ public class DoctorServiceImpl implements DoctorService {
 
     @Override
     @Transactional
+    public DoctorResponse setActiveStatus(Long id, boolean active) {
+        Doctor doctor = doctorRepo.findById(id)
+                .orElseThrow(() -> new NotFound("Doctor not found with ID: " + id));
+        doctor.setActive(active);
+        doctor = doctorRepo.save(doctor);
+        return mapToResponse(doctor);
+    }
+
+    @Override
+    @Transactional
     public void deleteDoctor(Long id) {
         if (!doctorRepo.existsById(id)) {
             throw new NotFound("Doctor not found with ID: " + id);

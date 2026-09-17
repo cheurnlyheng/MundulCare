@@ -28,6 +28,9 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AppointmentServiceImpl implements AppointmentService {
 
+    private static final int NO_SHOW_STRIKE_LIMIT = 2;
+    private static final int CANCEL_STRIKE_LIMIT = 3;
+
     private final AppointmentRepo appointmentRepo;
     private final DoctorRepo doctorRepo;
     private final UserRepo userRepo;
@@ -39,11 +42,25 @@ public class AppointmentServiceImpl implements AppointmentService {
         User patient = userRepo.findById(userId)
                 .orElseThrow(() -> new NotFound("Patient account not found with ID: " + userId));
 
+        if (patient.isBookingLocked()) {
+            throw new RuntimeException("Your account has been locked from booking new appointments. " +
+                    "Please contact hospital administration to resolve this and restore access.");
+        }
+
         Doctor doctor = doctorRepo.findById(request.getDoctorId())
                 .orElseThrow(() -> new NotFound("Doctor not found with ID: " + request.getDoctorId()));
 
         if (!doctor.isActive()) {
             throw new RuntimeException("This doctor is currently not accepting appointments.");
+        }
+
+        // One active appointment at a time - prevents a patient from stacking up multiple
+        // pending/confirmed bookings (with any doctor) before an earlier one is resolved.
+        boolean hasActiveAppointment = appointmentRepo.existsByPatientUserIdAndStatusIn(
+                userId, List.of(AppointmentStatus.PENDING, AppointmentStatus.CONFIRMED));
+        if (hasActiveAppointment) {
+            throw new RuntimeException("You already have an active appointment pending or confirmed. " +
+                    "Please wait for it to be resolved, or cancel it, before booking a new one.");
         }
 
         if (!request.getStartTime().isBefore(request.getEndTime())) {
@@ -106,7 +123,7 @@ public class AppointmentServiceImpl implements AppointmentService {
 
     @Override
     public List<AppointmentResponse> getAllAppointments() {
-        List<Appointment> appointments = appointmentRepo.findAllByOrderByAppointmentDateDescStartTimeDesc();
+        List<Appointment> appointments = appointmentRepo.findAllByOrderByCreatedAtDesc();
         return appointments.stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
@@ -119,8 +136,10 @@ public class AppointmentServiceImpl implements AppointmentService {
         User user = userRepo.findById(userId)
                 .orElseThrow(() -> new NotFound("User not found with ID: " + userId));
 
+        boolean isSelfCancel = appointment.getPatientUser().getId().equals(userId);
+
         // Ensure user owns this appointment or is Admin
-        if (!appointment.getPatientUser().getId().equals(userId) && user.getRole() != Role.ADMIN) {
+        if (!isSelfCancel && user.getRole() != Role.ADMIN) {
             throw new RuntimeException("You are not authorized to cancel this appointment.");
         }
 
@@ -134,6 +153,18 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointment.setStatus(AppointmentStatus.CANCELLED);
         appointment = appointmentRepo.save(appointment);
+
+        // Self-cancellation strikes: 3 self-cancelled bookings auto-locks the patient out of
+        // booking new appointments, the same as repeated no-shows - an admin cancelling on a
+        // patient's behalf never counts against them, only the patient's own choice to cancel.
+        if (isSelfCancel) {
+            User patient = appointment.getPatientUser();
+            patient.setCancelCount(patient.getCancelCount() + 1);
+            if (patient.getCancelCount() >= CANCEL_STRIKE_LIMIT) {
+                patient.setBookingLocked(true);
+            }
+            userRepo.save(patient);
+        }
 
         // Send cancellation email to Doctor
         try {
@@ -158,10 +189,25 @@ public class AppointmentServiceImpl implements AppointmentService {
 
         appointment = appointmentRepo.save(appointment);
 
-        // Notify both Patient and Doctor of the Admin's decision
+        // No-show strikes: 2 no-shows auto-locks the patient out of booking new appointments
+        // (not login) until an admin manually clears it via the unlock-booking endpoint.
+        if (request.getStatus() == AppointmentStatus.NO_SHOW) {
+            User patient = appointment.getPatientUser();
+            patient.setNoShowCount(patient.getNoShowCount() + 1);
+            if (patient.getNoShowCount() >= NO_SHOW_STRIKE_LIMIT) {
+                patient.setBookingLocked(true);
+            }
+            userRepo.save(patient);
+        }
+
+        // Notify the patient of the admin's decision. The doctor only needs an email when
+        // their schedule actually changes (confirmed/completed) - not on a decline, since
+        // the doctor never saw or acted on the request the admin is rejecting.
         try {
             emailService.sendPatientStatusUpdate(appointment);
-            emailService.sendDoctorStatusUpdate(appointment);
+            if (appointment.getStatus() != AppointmentStatus.REJECTED) {
+                emailService.sendDoctorStatusUpdate(appointment);
+            }
         } catch (Exception e) {
             log.error("Failed to send status update emails: {}", e.getMessage());
         }
@@ -181,6 +227,9 @@ public class AppointmentServiceImpl implements AppointmentService {
                 .patientName(appointment.getPatientName())
                 .patientEmail(appointment.getPatientEmail())
                 .patientPhone(appointment.getPatientPhone())
+                .patientNoShowCount(appointment.getPatientUser().getNoShowCount())
+                .patientCancelCount(appointment.getPatientUser().getCancelCount())
+                .patientBookingLocked(appointment.getPatientUser().isBookingLocked())
                 .appointmentDate(appointment.getAppointmentDate())
                 .startTime(appointment.getStartTime())
                 .endTime(appointment.getEndTime())

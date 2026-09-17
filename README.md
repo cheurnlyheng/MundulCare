@@ -45,6 +45,10 @@ npm install
 npm run dev
 ```
 
-Edit `.env.local` if your backend runs somewhere other than `http://localhost:8080/api`, and fill in `NEXT_PUBLIC_GOOGLE_CLIENT_ID` with the same Client ID used on the backend (leave blank to hide the Google button).
+Fill in `NEXT_PUBLIC_GOOGLE_CLIENT_ID` with the same Client ID used on the backend (leave blank to hide the Google button). Leave `NEXT_PUBLIC_API_URL` as `/api` - the Next.js dev server proxies it to the backend (see "Reverse proxy" below); only change it if the backend isn't running at `http://localhost:8080`, in which case set `BACKEND_URL` instead.
 
-The app starts on `http://localhost:3000`.
+The app starts on `http://localhost:3000`. Open only this URL in the browser - the frontend and backend are both reachable through it.
+
+## Reverse proxy (local dev)
+
+The browser only ever talks to `http://localhost:3000`. `frontend/next.config.ts` rewrites `/api/*` and `/uploads/*` requests to the Spring Boot backend (`http://localhost:8080` by default, override with a `BACKEND_URL` env var). This keeps everything on one origin during development, so the backend's CORS config never comes into play.

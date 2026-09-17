@@ -24,8 +24,10 @@ import {
   SymptomMatchResponse,
 } from '@/types/doctor';
 import {
+  AdminUser,
   AppointmentResponse,
   BookAppointmentRequest,
+  PatientStrike,
   UpdateAppointmentStatusRequest,
 } from '@/types/appointment';
 
@@ -46,6 +48,23 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// If an admin deletes this account while it's still logged in, the backend flags the
+// next request with this header instead of a generic 401 - force the session out and
+// explain why, rather than leaving them stuck on a page silently failing every request.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (typeof window !== 'undefined' && error.response?.headers?.['x-auth-error'] === 'ACCOUNT_DELETED') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login?accountDeleted=1';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 // 1. Authentication API
 export const authApi = {
@@ -138,6 +157,12 @@ export const doctorApi = {
 
   update: async (id: number, data: DoctorRequest): Promise<ApiResponse<Doctor>> => {
     const res = await api.put<ApiResponse<Doctor>>(`/doctors/${id}`, data);
+    return res.data;
+  },
+
+  // Activates/deactivates without touching specialties - works even for a doctor with none assigned.
+  setActive: async (id: number, active: boolean): Promise<ApiResponse<Doctor>> => {
+    const res = await api.put<ApiResponse<Doctor>>(`/doctors/${id}/status`, { active });
     return res.data;
   },
 
@@ -252,6 +277,20 @@ export const auditLogApi = {
     const res = await api.get<ApiResponse<AuditLogEntry[]>>('/admin/audit-logs');
     return res.data;
   },
+
+  // Downloads the CSV and triggers a save-as in the browser (auth header can't be attached to a plain <a> link)
+  exportCsv: async (): Promise<void> => {
+    const res = await api.get('/admin/audit-logs/export/csv', { responseType: 'blob' });
+    const blob = new Blob([res.data], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'audit-logs.csv';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };
 
 // 8. System Settings API (maintenance mode)
@@ -263,6 +302,39 @@ export const settingsApi = {
 
   updateMaintenanceMode: async (enabled: boolean, message?: string): Promise<ApiResponse<MaintenanceStatus>> => {
     const res = await api.put<ApiResponse<MaintenanceStatus>>('/admin/settings/maintenance', { enabled, message });
+    return res.data;
+  },
+};
+
+// 9. Admin actions on patient accounts
+export const adminUserApi = {
+  // Every registered account (User Management).
+  getAll: async (): Promise<ApiResponse<AdminUser[]>> => {
+    const res = await api.get<ApiResponse<AdminUser[]>>('/admin/users');
+    return res.data;
+  },
+
+  // Permanently deletes a patient account and their appointment history. Admin accounts are rejected server-side.
+  delete: async (userId: number): Promise<ApiResponse<string>> => {
+    const res = await api.delete<ApiResponse<string>>(`/admin/users/${userId}`);
+    return res.data;
+  },
+
+  // Every patient with at least one recorded no-show strike (the blacklist view).
+  getNoShowList: async (): Promise<ApiResponse<PatientStrike[]>> => {
+    const res = await api.get<ApiResponse<PatientStrike[]>>('/admin/users/no-show-list');
+    return res.data;
+  },
+
+  // Clears a patient's no-show strikes and restores their ability to book new appointments.
+  unlockBooking: async (userId: number): Promise<ApiResponse<string>> => {
+    const res = await api.put<ApiResponse<string>>(`/admin/users/${userId}/unlock-booking`);
+    return res.data;
+  },
+
+  // Manually restricts a patient account from booking, same effect as hitting the strike limit.
+  lockBooking: async (userId: number): Promise<ApiResponse<string>> => {
+    const res = await api.put<ApiResponse<string>>(`/admin/users/${userId}/lock-booking`);
     return res.data;
   },
 };

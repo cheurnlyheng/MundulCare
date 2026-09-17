@@ -1,5 +1,6 @@
 package etec.project.hospitalAppointmentManagement.dto.response;
 
+import etec.project.hospitalAppointmentManagement.enums.AuthProvider;
 import etec.project.hospitalAppointmentManagement.enums.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,4 +20,5 @@ public class AuthResponse {
  private String email;
  private Role role;
  private String profileImage;
+ private AuthProvider authProvider;
 }

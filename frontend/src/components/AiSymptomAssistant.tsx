@@ -80,7 +80,7 @@ export default function AiSymptomAssistant() {
               value={symptoms}
               onChange={(e) => setSymptoms(e.target.value)}
               placeholder="e.g., I have had a sharp pain in my chest when taking deep breaths and dizziness for the past 2 days..."
-              className="w-full p-4 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all resize-none"
+              className="w-full p-4 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20  transition-all resize-none"
             />
           </div>
 

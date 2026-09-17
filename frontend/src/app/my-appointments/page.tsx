@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Stethoscope,
   ArrowRight,
+  Lock,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import { appointmentApi } from '@/lib/api';
@@ -27,6 +28,7 @@ export default function MyAppointmentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('ALL');
+  const [cancelTarget, setCancelTarget] = useState<AppointmentResponse | null>(null);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -35,6 +37,15 @@ export default function MyAppointmentsPage() {
       fetchMyAppointments();
     }
   }, [isAuthenticated, authLoading]);
+
+  // Close modal on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCancelTarget(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const fetchMyAppointments = async () => {
     try {
@@ -49,12 +60,13 @@ export default function MyAppointmentsPage() {
     }
   };
 
-  const handleCancelAppointment = async (id: number) => {
-    if (!confirm('Are you sure you wish to cancel this scheduled consultation?')) return;
-    setCancellingId(id);
+  const confirmCancelAppointment = async () => {
+    if (!cancelTarget) return;
+    setCancellingId(cancelTarget.id);
     try {
-      const res = await appointmentApi.cancel(id);
+      const res = await appointmentApi.cancel(cancelTarget.id);
       if (res.success) {
+        setCancelTarget(null);
         fetchMyAppointments();
       }
     } catch (err: any) {
@@ -89,6 +101,12 @@ export default function MyAppointmentsPage() {
         return (
           <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-300">
             Cancelled
+          </span>
+        );
+      case 'NO_SHOW':
+        return (
+          <span className="px-3 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-300">
+            No-Show
           </span>
         );
       default:
@@ -171,6 +189,16 @@ export default function MyAppointmentsPage() {
           ))}
         </div>
 
+        {appointments.some((a) => a.patientBookingLocked) && (
+          <div className="mb-6 p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-start gap-3 text-xs sm:text-sm text-rose-700">
+            <Lock className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+            <span>
+              Your account has been locked from booking new appointments. Please contact hospital administration to
+              resolve this and restore access.
+            </span>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-start gap-3 text-xs sm:text-sm text-red-700">
             <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -213,7 +241,7 @@ export default function MyAppointmentsPage() {
 
                       {apt.status === 'PENDING' && (
                         <button
-                          onClick={() => handleCancelAppointment(apt.id)}
+                          onClick={() => setCancelTarget(apt)}
                           disabled={cancellingId === apt.id}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                           title="Cancel Consultation"
@@ -283,6 +311,51 @@ export default function MyAppointmentsPage() {
           </div>
         )}
       </main>
+
+      {/* Cancel Confirmation Modal */}
+      {cancelTarget && (
+        <div
+          onClick={() => setCancelTarget(null)}
+          className="fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-2xl border border-slate-200 shadow-xl max-w-md w-full p-6 animate-in fade-in-50 zoom-in-95"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+                <XCircle className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900">Cancel Consultation?</h3>
+            </div>
+
+            <p className="text-sm text-slate-600 leading-relaxed mb-5">
+              Are you sure you want to cancel your appointment with{' '}
+              <strong className="text-slate-900">{cancelTarget.doctorName}</strong> on{' '}
+              <strong className="text-slate-900">{cancelTarget.appointmentDate}</strong> at{' '}
+              <strong className="text-slate-900">{cancelTarget.startTime}</strong>? This cannot be undone.
+            </p>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setCancelTarget(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm cursor-pointer"
+              >
+                Keep Appointment
+              </button>
+              <button
+                type="button"
+                onClick={confirmCancelAppointment}
+                disabled={cancellingId === cancelTarget.id}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-sm shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                {cancellingId === cancelTarget.id ? 'Cancelling...' : 'Confirm Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

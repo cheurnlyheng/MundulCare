@@ -41,7 +41,7 @@ export default function GoogleSignInButton() {
     window.google.accounts.id.renderButton(buttonRef.current, {
       theme: 'outline',
       size: 'large',
-      width: 320,
+      width: 370,
       text: 'continue_with',
     });
   };

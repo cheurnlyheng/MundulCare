@@ -9,14 +9,21 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestTemplate;
 
 @Configuration
 public class OpenApiConfig {
 
+    // Plain `new RestTemplate()` has no timeout at all, so a slow/overloaded external
+    // service (Gemini, Google OAuth) can hang a request for minutes instead of failing
+    // fast into the caller's fallback handling - fatal for a live demo.
     @Bean
     public RestTemplate restTemplate() {
-        return new RestTemplate();
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(5000);
+        factory.setReadTimeout(8000);
+        return new RestTemplate(factory);
     }
 
     @Bean

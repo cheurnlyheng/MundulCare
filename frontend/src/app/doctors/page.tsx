@@ -103,7 +103,7 @@ function DoctorsList() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search doctor by name, credentials, or symptoms..."
-              className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20  transition-all"
             />
             {search && (
               <button

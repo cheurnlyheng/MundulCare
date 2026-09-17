@@ -1,15 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff, ShieldAlert } from 'lucide-react';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const accountDeleted = searchParams.get('accountDeleted') === '1';
   const { setAuth } = useAuth();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -49,6 +51,15 @@ export default function LoginPage() {
         <p className="text-xs text-slate-500 mt-1">Sign in to manage your medical consultations</p>
       </div>
 
+      {accountDeleted && (
+        <div className="mb-5 p-3.5 rounded-xl bg-amber-50 border border-amber-200/80 text-xs text-amber-800 flex items-start gap-2">
+          <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <span className="font-medium">
+            Your account has been deleted. Please contact hospital administration if you believe this is a mistake.
+          </span>
+        </div>
+      )}
+
       {error && (
         <div className="mb-5 p-3.5 rounded-xl bg-red-50 border border-red-200/80 text-xs text-red-700">
           <div className="flex items-start gap-2">
@@ -81,7 +92,7 @@ export default function LoginPage() {
               placeholder="you@example.com"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
             />
           </div>
         </div>
@@ -106,7 +117,7 @@ export default function LoginPage() {
               placeholder="••••••••"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
             />
             <button
               type="button"
@@ -143,5 +154,13 @@ export default function LoginPage() {
         </Link>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="text-center py-8 text-slate-400 text-xs">Loading...</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

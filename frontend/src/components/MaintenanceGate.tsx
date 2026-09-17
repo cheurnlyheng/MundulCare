@@ -43,6 +43,20 @@ export default function MaintenanceGate({ children }: { children: React.ReactNod
     };
   }, []);
 
+  // Re-check on every navigation, not just every RECHECK_INTERVAL_MS. Without this, a
+  // status fetched before maintenance was switched on (e.g. while sitting on /login,
+  // which bypasses this gate) stays stale until the next periodic poll - so a patient who
+  // logs in and lands on a normal page can briefly see it (and its doomed API calls) render
+  // before the gate catches up.
+  useEffect(() => {
+    settingsApi
+      .getMaintenanceStatus()
+      .then((res) => {
+        if (res.success && res.data) setStatus(res.data);
+      })
+      .catch(() => {});
+  }, [pathname]);
+
   const isAdmin = user?.role === 'ADMIN';
   const isAlwaysAllowedRoute = ALWAYS_ALLOWED_PATHS.some((path) => pathname?.startsWith(path));
 

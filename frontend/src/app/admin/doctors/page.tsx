@@ -11,17 +11,14 @@ import {
   Loader2,
   AlertCircle,
   X,
-  Camera,
-  User as UserIcon,
   Filter,
   CheckCircle2,
-  ChevronDown,
-  Check,
 } from 'lucide-react';
 import AdminHeader from '@/components/AdminHeader';
 import AdminSidebar from '@/components/AdminSidebar';
 import CustomSelect from '@/components/CustomSelect';
 import Pagination from '@/components/Pagination';
+import DoctorForm from '@/components/DoctorForm';
 import { doctorApi, specialtyApi } from '@/lib/api';
 import { Doctor, DoctorRequest, Specialty } from '@/types/doctor';
 import { useAuth } from '@/context/AuthContext';
@@ -43,33 +40,9 @@ export default function AdminDoctorsPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 8;
 
-  // Modal State for Create / Edit Doctor
+  // Create Doctor Modal (editing has its own dedicated page - too many fields for a modal)
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingDoctorId, setEditingDoctorId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
-
-  // Doctor Form Fields
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [bio, setBio] = useState('');
-  const [experienceYears, setExperienceYears] = useState(5);
-  const [consultationFee, setConsultationFee] = useState(30);
-  const [address, setAddress] = useState('');
-  const [isActive, setIsActive] = useState(true);
-  const [selectedSpecialtyIds, setSelectedSpecialtyIds] = useState<number[]>([]);
-
-  // Weekly Schedules
-  const [schedules, setSchedules] = useState<
-    { dayOfWeek: string; startTime: string; endTime: string; isAvailable: boolean }[]
-  >([]);
-
-  const DAYS_OF_WEEK = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-
-  // Profile photo
-  const [editingDoctorImage, setEditingDoctorImage] = useState<string | undefined>(undefined);
-  const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
   // Separate Confirmation Modals
   const [deactivateTarget, setDeactivateTarget] = useState<Doctor | null>(null);
@@ -77,38 +50,6 @@ export default function AdminDoctorsPage() {
 
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
-
-  const handleDoctorPhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !editingDoctorId) return;
-    setUploadingPhoto(true);
-    try {
-      const res = await doctorApi.uploadProfileImage(editingDoctorId, file);
-      if (res.success && res.data) {
-        setEditingDoctorImage(res.data);
-        fetchData();
-      }
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to upload photo.');
-    } finally {
-      setUploadingPhoto(false);
-      e.target.value = '';
-    }
-  };
-
-  const handleRemoveDoctorPhoto = async () => {
-    if (!editingDoctorId) return;
-    setUploadingPhoto(true);
-    try {
-      await doctorApi.deleteProfileImage(editingDoctorId);
-      setEditingDoctorImage(undefined);
-      fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.message || 'Failed to remove photo.');
-    } finally {
-      setUploadingPhoto(false);
-    }
-  };
 
   const fetchData = async () => {
     try {
@@ -149,74 +90,16 @@ export default function AdminDoctorsPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const openCreateModal = () => {
-    setEditingDoctorId(null);
-    setName('');
-    setEmail('');
-    setPhone('+855 12 ');
-    setLicenseNumber('MD-KH-2026-');
-    setBio('');
-    setExperienceYears(5);
-    setConsultationFee(25);
-    setAddress('Room 101, Building A');
-    setIsActive(true);
-    setSelectedSpecialtyIds(specialties.length > 0 ? [specialties[0].id] : []);
-    setSchedules([]);
-    setEditingDoctorImage(undefined);
-    setIsModalOpen(true);
-  };
-
-  const openEditModal = (doctor: Doctor) => {
-    setEditingDoctorId(doctor.id);
-    setName(doctor.name);
-    setEmail(doctor.email);
-    setPhone(doctor.phone || '');
-    setLicenseNumber(doctor.licenseNumber);
-    setBio(doctor.bio || '');
-    setExperienceYears(doctor.experienceYears);
-    setConsultationFee(doctor.consultationFee);
-    setAddress(doctor.address || '');
-    setIsActive(doctor.isActive);
-    setSelectedSpecialtyIds(doctor.specialties?.map((s) => s.id) || []);
-    setEditingDoctorImage(doctor.profileImage);
-    setSchedules(
-      (doctor.schedules || []).map((s) => ({
-        dayOfWeek: s.dayOfWeek,
-        startTime: s.startTime,
-        endTime: s.endTime,
-        isAvailable: s.isAvailable,
-      }))
-    );
-    setIsModalOpen(true);
-  };
-
-  const handleSaveDoctor = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (selectedSpecialtyIds.length === 0) {
-      alert('Please select at least one specialty');
-      return;
-    }
-
+  const handleCreateDoctor = async (payload: DoctorRequest, photoFile?: File) => {
     setSaving(true);
-    const payload: DoctorRequest = {
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim() || undefined,
-      licenseNumber: licenseNumber.trim(),
-      bio: bio.trim(),
-      experienceYears: Number(experienceYears),
-      consultationFee: Number(consultationFee),
-      address: address.trim() || undefined,
-      isActive,
-      specialtyIds: selectedSpecialtyIds,
-      schedules,
-    };
-
     try {
-      if (editingDoctorId) {
-        await doctorApi.update(editingDoctorId, payload);
-      } else {
-        await doctorApi.create(payload);
+      const res = await doctorApi.create(payload);
+      if (photoFile && res.data?.id) {
+        try {
+          await doctorApi.uploadProfileImage(res.data.id, photoFile);
+        } catch (err: any) {
+          alert(err.response?.data?.message || 'Doctor was created, but the photo failed to upload.');
+        }
       }
       setIsModalOpen(false);
       fetchData();
@@ -232,27 +115,8 @@ export default function AdminDoctorsPage() {
     setDeactivating(true);
     const doc = deactivateTarget;
 
-    const payload: DoctorRequest = {
-      name: doc.name,
-      email: doc.email,
-      phone: doc.phone || undefined,
-      licenseNumber: doc.licenseNumber,
-      bio: doc.bio || '',
-      experienceYears: doc.experienceYears,
-      consultationFee: doc.consultationFee,
-      address: doc.address || undefined,
-      isActive: !doc.isActive,
-      specialtyIds: doc.specialties?.map((s) => s.id) || [],
-      schedules: doc.schedules?.map((s) => ({
-        dayOfWeek: s.dayOfWeek,
-        startTime: s.startTime,
-        endTime: s.endTime,
-        isAvailable: s.isAvailable,
-      })) || [],
-    };
-
     try {
-      await doctorApi.update(doc.id, payload);
+      await doctorApi.setActive(doc.id, !doc.isActive);
       setDeactivateTarget(null);
       fetchData();
     } catch (err: any) {
@@ -335,7 +199,7 @@ export default function AdminDoctorsPage() {
 
           <button
             type="button"
-            onClick={openCreateModal}
+            onClick={() => setIsModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#6D28D9] hover:bg-[#5b21b6] text-white font-bold text-sm shadow-xs transition-colors cursor-pointer self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
@@ -471,9 +335,9 @@ export default function AdminDoctorsPage() {
                             </button>
 
                             <button
-                              onClick={() => openEditModal(doc)}
+                              onClick={() => router.push(`/admin/doctors/${doc.id}/edit`)}
                               title="Edit Doctor"
-                              className="p-2 rounded-xl text-[#6D28D9] hover:bg-purple-50 transition-colors cursor-pointer focus:outline-none"
+                              className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer focus:outline-none"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
@@ -504,7 +368,7 @@ export default function AdminDoctorsPage() {
         </div>
       </main>
 
-      {/* Add / Edit Doctor Modal: Increased width (max-w-4xl), lower height, 2-column grid */}
+      {/* Add Doctor Modal (editing happens on its own dedicated page) */}
       {isModalOpen && (
         <div
           onClick={() => setIsModalOpen(false)}
@@ -516,12 +380,8 @@ export default function AdminDoctorsPage() {
           >
             <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-5">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">
-                  {editingDoctorId ? 'Edit Physician Profile' : 'Register New Physician'}
-                </h3>
-                <p className="text-xs text-slate-500">
-                  {editingDoctorId ? 'Update doctor credentials, department, and consultation hours.' : 'Create a new physician profile.'}
-                </p>
+                <h3 className="text-lg font-bold text-slate-900">Register New Physician</h3>
+                <p className="text-xs text-slate-500">Create a new physician profile.</p>
               </div>
               <button
                 type="button"
@@ -532,298 +392,13 @@ export default function AdminDoctorsPage() {
               </button>
             </div>
 
-            {/* Profile Photo Row */}
-            <div className="flex items-center gap-4 mb-5 pb-4 border-b border-slate-100">
-              <div className="relative">
-                <div className="w-16 h-16 rounded-2xl bg-purple-50 border border-purple-100 flex items-center justify-center text-[#6D28D9] overflow-hidden shrink-0 shadow-2xs">
-                  {editingDoctorId ? (
-                    <img
-                      src={getDoctorAvatarUrl(name || 'Doctor', editingDoctorId, editingDoctorImage)}
-                      alt="Doctor"
-                      className="w-full h-full object-cover object-top"
-                    />
-                  ) : (
-                    <UserIcon className="w-7 h-7" />
-                  )}
-                </div>
-                {uploadingPhoto && (
-                  <div className="absolute inset-0 rounded-2xl bg-white/70 flex items-center justify-center">
-                    <Loader2 className="w-4 h-4 animate-spin text-[#6D28D9]" />
-                  </div>
-                )}
-              </div>
-
-              <div className="text-sm">
-                {editingDoctorId ? (
-                  <div className="flex items-center gap-2">
-                    <label className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#f5f3ff] text-[#6D28D9] hover:bg-[#ede9fe] text-xs font-bold border border-[#ddd6fe] transition-colors cursor-pointer">
-                      <Camera className="w-3.5 h-3.5" />
-                      <span>{editingDoctorImage ? 'Change Photo' : 'Upload Custom Photo'}</span>
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        className="hidden"
-                        onChange={handleDoctorPhotoSelected}
-                      />
-                    </label>
-                    {editingDoctorImage && (
-                      <button
-                        type="button"
-                        onClick={handleRemoveDoctorPhoto}
-                        disabled={uploadingPhoto}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-bold border border-rose-200 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>Remove</span>
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-slate-500">
-                    After registering, you can upload a personalized photograph if desired.
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <form onSubmit={handleSaveDoctor} className="space-y-4 text-sm">
-              {/* 2-Column Inputs Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 text-sm">Doctor Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Dr. Jane Smith"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 text-sm">Doctor Email *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="doctor@hospital.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 text-sm">License Number *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="MD-KH-2026-001"
-                    value={licenseNumber}
-                    onChange={(e) => setLicenseNumber(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 text-sm">Contact Phone</label>
-                  <input
-                    type="tel"
-                    placeholder="+855 12 345 678"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 text-sm">Experience (Years) *</label>
-                  <input
-                    type="number"
-                    required
-                    min={0}
-                    value={experienceYears}
-                    onChange={(e) => setExperienceYears(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1 text-sm">Consultation Fee ($ USD) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    min={0}
-                    value={consultationFee}
-                    onChange={(e) => setConsultationFee(Number(e.target.value))}
-                    className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1 text-sm">Clinic Room / Hospital Suite</label>
-                <input
-                  type="text"
-                  placeholder="Room 205, Building A"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                />
-              </div>
-
-              {/* Specialties Multi-Select */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1.5 text-sm">
-                  Assigned Specialties (Select one or more) *
-                </label>
-                <div className="flex flex-wrap gap-1.5 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  {specialties.map((spec) => {
-                    const isSelected = selectedSpecialtyIds.includes(spec.id);
-                    return (
-                      <button
-                        key={spec.id}
-                        type="button"
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedSpecialtyIds(selectedSpecialtyIds.filter((id) => id !== spec.id));
-                          } else {
-                            setSelectedSpecialtyIds([...selectedSpecialtyIds, spec.id]);
-                          }
-                        }}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer ${
-                          isSelected
-                            ? 'bg-[#6D28D9] text-white shadow-xs'
-                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-100'
-                        }`}
-                      >
-                        {spec.name} {isSelected && '✓'}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bio */}
-              <div>
-                <label className="block font-bold text-slate-700 mb-1 text-sm">Doctor Bio & Qualifications</label>
-                <textarea
-                  rows={2}
-                  placeholder="Describe doctor background, focus area, and clinical qualifications..."
-                  value={bio}
-                  onChange={(e) => setBio(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-200 text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9] resize-none"
-                />
-              </div>
-
-              {/* Weekly Consultation Hours */}
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block font-bold text-slate-700 text-sm">Weekly Consultation Hours</label>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSchedules([
-                        ...schedules,
-                        { dayOfWeek: 'MONDAY', startTime: '09:00', endTime: '12:00', isAvailable: true },
-                      ])
-                    }
-                    className="text-xs font-bold text-[#6D28D9] hover:underline cursor-pointer"
-                  >
-                    + Add Time Block
-                  </button>
-                </div>
-                <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                  {schedules.map((sch, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200 text-sm"
-                    >
-                      <div className="relative flex-1">
-                        <select
-                          value={sch.dayOfWeek}
-                          onChange={(e) => {
-                            const updated = [...schedules];
-                            updated[idx] = { ...updated[idx], dayOfWeek: e.target.value };
-                            setSchedules(updated);
-                          }}
-                          className="w-full appearance-none pr-8 p-2 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white font-medium focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9] cursor-pointer"
-                        >
-                          {DAYS_OF_WEEK.map((day) => (
-                            <option key={day} value={day}>
-                              {day}
-                            </option>
-                          ))}
-                        </select>
-                        <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                      </div>
-                      <input
-                        type="time"
-                        value={sch.startTime}
-                        onChange={(e) => {
-                          const updated = [...schedules];
-                          updated[idx] = { ...updated[idx], startTime: e.target.value };
-                          setSchedules(updated);
-                        }}
-                        className="p-1.5 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                      />
-                      <span className="text-slate-400">-</span>
-                      <input
-                        type="time"
-                        value={sch.endTime}
-                        onChange={(e) => {
-                          const updated = [...schedules];
-                          updated[idx] = { ...updated[idx], endTime: e.target.value };
-                          setSchedules(updated);
-                        }}
-                        className="p-1.5 rounded-lg border border-slate-200 text-xs text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-[#6D28D9]/20 focus:border-[#6D28D9]"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setSchedules(schedules.filter((_, i) => i !== idx))}
-                        className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  {schedules.length === 0 && (
-                    <p className="text-xs text-slate-400 py-1">No working hours added yet.</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="isActiveDoctor"
-                  checked={isActive}
-                  onChange={(e) => setIsActive(e.target.checked)}
-                  className="w-4 h-4 accent-[#6D28D9] rounded border-slate-300 cursor-pointer"
-                />
-                <label htmlFor="isActiveDoctor" className="font-semibold text-slate-700 text-sm">
-                  Active Physician (Accepting Patient Appointments)
-                </label>
-              </div>
-
-              <div className="flex gap-2 justify-end pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-sm cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-5 py-2 rounded-xl bg-[#6D28D9] hover:bg-[#5b21b6] text-white font-bold text-sm shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
-                >
-                  {saving ? 'Saving...' : editingDoctorId ? 'Save Changes' : 'Register Physician'}
-                </button>
-              </div>
-            </form>
+            <DoctorForm
+              specialties={specialties}
+              onSubmit={handleCreateDoctor}
+              onCancel={() => setIsModalOpen(false)}
+              saving={saving}
+              submitLabel="Register Physician"
+            />
           </div>
         </div>
       )}

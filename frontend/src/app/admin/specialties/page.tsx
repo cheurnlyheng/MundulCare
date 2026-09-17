@@ -187,7 +187,7 @@ export default function AdminSpecialtiesPage() {
                       <button
                         type="button"
                         onClick={() => openEditModal(spec)}
-                        className="p-2 rounded-xl text-[#6D28D9] hover:bg-purple-50 transition-colors cursor-pointer focus:outline-none"
+                        className="p-2 rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer focus:outline-none"
                         title="Edit Department"
                       >
                         <Edit2 className="w-4 h-4" />

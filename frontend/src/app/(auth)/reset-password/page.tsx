@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Lock, Mail, Loader2, AlertCircle, CheckCircle2, KeyRound, Eye, EyeOff } from 'lucide-react';
@@ -11,7 +11,16 @@ function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const initialEmail = searchParams.get('email') || '';
 
-  const [email, setEmail] = useState(initialEmail);
+  // This page only makes sense after requesting a code for a specific email on
+  // /forgot-password - without one there's no OTP to check against, so send them back
+  // rather than showing a free-text email field that invites guessing codes for other accounts.
+  useEffect(() => {
+    if (!initialEmail) {
+      router.replace('/forgot-password');
+    }
+  }, [initialEmail, router]);
+
+  const [email] = useState(initialEmail);
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -85,17 +94,15 @@ function ResetPasswordForm() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
-            Email Address
+            Email Address (Read-only)
           </label>
           <div className="relative">
             <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="email"
-              required
-              placeholder="you@example.com"
+              readOnly
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 bg-slate-50 text-xs cursor-not-allowed"
             />
           </div>
         </div>
@@ -128,7 +135,7 @@ function ResetPasswordForm() {
               placeholder="••••••••"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
             />
             <button
               type="button"
@@ -153,7 +160,7 @@ function ResetPasswordForm() {
               placeholder="••••••••"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-xs focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
+              className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 placeholder:text-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] transition-all"
             />
             <button
               type="button"

@@ -12,6 +12,9 @@ import {
   Activity,
   PhoneCall,
   Stethoscope,
+  Mail,
+  Phone,
+  Globe,
 } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import AiSymptomAssistant from '@/components/AiSymptomAssistant';
@@ -31,6 +34,13 @@ function getSpecialtyIcon(name: string) {
   if (lower.includes('ortho') || lower.includes('bone') || lower.includes('joint')) return Activity;
   return Stethoscope;
 }
+
+// Placeholder team roster - swap names, roles, and images once real staff photos are ready
+const TEAM_MEMBERS = [
+  { name: 'Mr. Cheurn Lyheng', role: 'Backend Dev', image: '/team-image/me2.png' },
+  { name: 'Mr. Chhan Philip', role: 'Frontend Dev', image: '/team-image/2.png' },
+  { name: 'Mr. Hong Mengyu', role: 'Software Tester', image: '/team-image/3.png' },
+];
 
 export default function HomePage() {
   const [specialties, setSpecialties] = useState<Specialty[]>([]);
@@ -64,11 +74,11 @@ export default function HomePage() {
       <Navbar />
 
       {/* 1. Hero Section - Full-bleed hospital banner with text overlaid on top */}
-      <section className="relative h-130 sm:h-150 lg:h-165 overflow-hidden">
+      <section className="relative min-h-130 sm:min-h-150 lg:min-h-165 h-[calc(100svh-4rem)] overflow-hidden">
         <img
           src="/banner/photo_2026-09-02_21-04-07.jpg"
           alt="MundulCare Hospital Building"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-[68%_center] lg:object-center"
         />
         {/* Scrim so the overlaid text stays readable regardless of what's behind it */}
         <div className="absolute inset-0 bg-linear-to-r from-slate-950/55 via-slate-950/30 to-slate-950/5" />
@@ -241,7 +251,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 ">
             <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-xs group">
               <img
                 src={HOSPITAL_IMAGES.heroLobby}
@@ -250,7 +260,7 @@ export default function HomePage() {
               />
               <div className="p-5">
                 <h3 className="font-bold text-slate-900 text-sm">Welcoming Reception & Check-In</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                <p className="text-md text-slate-500 mt-1 leading-relaxed">
                   A dedicated front-desk team greets every patient, verifies appointment details, and guides you to the right department with minimal wait time.
                 </p>
               </div>
@@ -264,13 +274,13 @@ export default function HomePage() {
               />
               <div className="p-5">
                 <h3 className="font-bold text-slate-900 text-sm">Rapid Diagnostics Lab</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                <p className="text-md text-slate-500 mt-1 leading-relaxed">
                   On-site clinical diagnostics ensuring timely evaluations and treatment decisions.
                 </p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-xs group">
+            <div className="rounded-2xl border border-slate-200 overflow-hidden bg-white shadow-xs group ">
               <img
                 src={HOSPITAL_IMAGES.medicalCareCenter}
                 alt="Continuous Care"
@@ -278,7 +288,7 @@ export default function HomePage() {
               />
               <div className="p-5">
                 <h3 className="font-bold text-slate-900 text-sm">24/7 Coordinated Care</h3>
-                <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+                <p className="text-md text-slate-500 mt-1 leading-relaxed">
                   Seamless appointment scheduling, email confirmation receipts, and continuous specialist access.
                 </p>
               </div>
@@ -287,22 +297,68 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. Minimalist Footer */}
-      <footer className="bg-white py-8 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <div className="flex items-center gap-2.5">
-            <img src="/logo.png" alt="Mundul Care Logo" className="w-5 h-5 object-contain" />
-            <span className="font-bold text-slate-900">Mundul Care</span>
-            <span>•</span>
-            <span>Appointment & Specialist Management</span>
+      {/* 6. Meet The Team */}
+      <section className="py-14 bg-white border-b border-slate-200/80">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-10">
+            <div>
+              <span className="text-xs font-bold text-[#aa5588] uppercase tracking-wider">Our People</span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight mt-1">
+                Meet The Team
+                <br />
+                Developers
+              </h2>
+            </div>
+            
           </div>
 
-          <div className="flex items-center gap-2 text-[#aa5588] font-semibold">
-            <PhoneCall className="w-4 h-4" />
-            <span>Emergency Hotline: +855 12 999 888</span>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            {TEAM_MEMBERS.map((member) => (
+              <div key={member.name}>
+                <div className="rounded-2xl overflow-hidden bg-slate-100 aspect-square">
+                  <img src={member.image} alt={member.name} className="w-full h-full object-cover" />
+                </div>
+                <h3 className="mt-4 font-extrabold text-slate-900 text-sm uppercase tracking-wide">
+                  {member.name}
+                </h3>
+                <p className="text-[#aa5588] text-xs font-semibold mt-0.5">{member.role}</p>
+                <div className="flex items-center gap-3 mt-2.5 text-slate-400">
+                  <Mail className="w-4 h-4 hover:text-[#aa5588] transition-colors cursor-pointer" />
+                  <Phone className="w-4 h-4 hover:text-[#aa5588] transition-colors cursor-pointer" />
+                  <Globe className="w-4 h-4 hover:text-[#aa5588] transition-colors cursor-pointer" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </footer>
+      </section>
+
+      {/* 7. Minimalist Footer */}
+      <footer className="bg-white pt-10 pb-8 mt-auto border-t border-slate-200/80">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 text-md text-slate-500">
+      
+      {/* Left */}
+      <div className="flex items-center gap-2.5">
+        <img
+          src="/logo.png"
+          alt="Mundul Care Logo"
+          className="w-5 h-5 object-contain"
+        />
+        <span className="font-bold text-slate-900">Mundul Care</span>
+        <span>•</span>
+        <span>Appointment & Specialist Management</span>
+      </div>
+
+      {/* Right */}
+      <div className="flex items-center gap-2 text-[#aa5588] font-semibold">
+        <PhoneCall className="w-4 h-4" />
+        <span>Emergency Hotline: +855 12 999 888</span>
+      </div>
+
+    </div>
+  </div>
+</footer>
     </div>
   );
 }

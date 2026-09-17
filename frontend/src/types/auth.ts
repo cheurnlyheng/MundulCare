@@ -21,6 +21,7 @@ export interface AuthResponse {
   email: string;
   role: Role;
   profileImage?: string;
+  authProvider: AuthProvider;
 }
 
 export interface UserProfile {
@@ -32,6 +33,7 @@ export interface UserProfile {
   role: Role;
   authProvider: AuthProvider;
   isVerified: boolean;
+  hasPassword: boolean;
   createdAt: string;
 }
 

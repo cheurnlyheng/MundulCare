@@ -17,7 +17,7 @@ import {
 import Image from 'next/image';
 import logoImg from '../../public/logo.png';
 import { useAuth } from '@/context/AuthContext';
-import { getImageUrl } from '@/lib/imageUrl';
+import Avatar from '@/components/Avatar';
 
 export default function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
@@ -131,11 +131,7 @@ export default function Navbar() {
                       : 'bg-[#fbf5f8] border-[#edd5e3] text-[#aa5588]'
                   }`}
                 >
-                  {user.profileImage ? (
-                    <img src={getImageUrl(user.profileImage)} alt={user.name} className="w-full h-full object-cover" />
-                  ) : (
-                    user.name ? user.name.charAt(0).toUpperCase() : 'U'
-                  )}
+                  <Avatar src={user.profileImage} name={user.name} />
                 </div>
 
                 <div className="flex flex-col text-left">
@@ -250,11 +246,7 @@ export default function Navbar() {
                   : 'bg-[#fbf5f8] border-[#edd5e3] text-[#aa5588]'
               }`}
             >
-              {user.profileImage ? (
-                <img src={getImageUrl(user.profileImage)} alt={user.name} className="w-full h-full object-cover" />
-              ) : (
-                user.name ? user.name.charAt(0).toUpperCase() : 'U'
-              )}
+              <Avatar src={user.profileImage} name={user.name} />
             </Link>
           )}
 

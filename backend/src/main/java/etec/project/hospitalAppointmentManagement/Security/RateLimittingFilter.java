@@ -40,12 +40,14 @@ public class RateLimittingFilter extends OncePerRequestFilter {
     ) throws ServletException, IOException {
 
         String path = request.getRequestURI();
+        String group = rateLimitGroup(path);
 
-        if (path.startsWith("/api/auth")) {
+        if (group != null) {
             String clientIp = getClientIp(request);
+            String key = clientIp + ":" + group;
             long currentTime = System.currentTimeMillis();
 
-            RequestTracker tracker = ipRequestsMap.compute(clientIp, (ip, currentTracker) -> {
+            RequestTracker tracker = ipRequestsMap.compute(key, (k, currentTracker) -> {
                 if (currentTracker == null || (currentTime - currentTracker.startTime) > WINDOW_TIME_MS) {
                     return new RequestTracker(1, currentTime);
                 } else {
@@ -65,6 +67,15 @@ public class RateLimittingFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    // /api/ai calls out to the (paid) Gemini API and is otherwise public (permitAll in
+    // SecurityConfig), so it needs its own rate-limit bucket - separate from /api/auth's,
+    // so hitting one endpoint doesn't burn through the other's quota for the same IP.
+    private String rateLimitGroup(String path) {
+        if (path.startsWith("/api/auth")) return "auth";
+        if (path.startsWith("/api/ai")) return "ai";
+        return null;
     }
 
     private String getClientIp(HttpServletRequest request) {

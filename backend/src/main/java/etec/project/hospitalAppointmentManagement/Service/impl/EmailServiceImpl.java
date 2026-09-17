@@ -6,6 +6,7 @@ import etec.project.hospitalAppointmentManagement.enums.AppointmentStatus;
 import etec.project.hospitalAppointmentManagement.enums.OtpType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Async;
@@ -20,6 +21,20 @@ public class EmailServiceImpl implements EmailService {
 
     private final JavaMailSender mailSender;
 
+    @Value("${spring.mail.username}")
+    private String fromEmail;
+
+    // Gmail lets the SMTP account set any display name on the From header as long as the
+    // address itself matches the authenticated account - without this, recipients see the
+    // raw Gmail account name instead of the hospital's brand.
+    private SimpleMailMessage newMessage(String to, String subject) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("MundulCare <" + fromEmail + ">");
+        message.setTo(to);
+        message.setSubject(subject);
+        return message;
+    }
+
     @Override
     public String generateOtp() {
         SecureRandom random = new SecureRandom();
@@ -30,8 +45,7 @@ public class EmailServiceImpl implements EmailService {
     @Override
     public void sendOtpEmail(String toEmail, String otp, OtpType type) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(toEmail);
+            SimpleMailMessage message = newMessage(toEmail, null);
 
             if (type == OtpType.EMAIL_VERIFICATION) {
                 message.setSubject("Mundul Care - Account Verification");
@@ -57,6 +71,7 @@ public class EmailServiceImpl implements EmailService {
             case REJECTED -> "Declined";
             case COMPLETED -> "Completed";
             case CANCELLED -> "Cancelled";
+            case NO_SHOW -> "Marked as No-Show";
             default -> status.name();
         };
     }
@@ -65,9 +80,8 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendAdminBookingNotification(Appointment appointment, String adminEmail) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(adminEmail);
-            message.setSubject("MundulCare - New Appointment Pending Review: " + appointment.getPatientName());
+            SimpleMailMessage message = newMessage(adminEmail,
+                    "MundulCare - New Appointment Pending Review: " + appointment.getPatientName());
 
             String content = "Dear Administrator,\n\n" +
                     "A new appointment request requires your review.\n\n" +
@@ -95,9 +109,8 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendPatientBookingConfirmation(Appointment appointment) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(appointment.getPatientEmail());
-            message.setSubject("MundulCare - Appointment Booking Received");
+            SimpleMailMessage message = newMessage(appointment.getPatientEmail(),
+                    "MundulCare - Appointment Booking Received");
 
             String content = "Dear " + appointment.getPatientName() + ",\n\n" +
                     "Thank you for choosing MundulCare Hospital! Your appointment request has been successfully received.\n" +
@@ -125,9 +138,8 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendDoctorCancellationNotification(Appointment appointment) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(appointment.getDoctor().getEmail());
-            message.setSubject("MundulCare - Appointment Cancelled: " + appointment.getPatientName());
+            SimpleMailMessage message = newMessage(appointment.getDoctor().getEmail(),
+                    "MundulCare - Appointment Cancelled: " + appointment.getPatientName());
 
             String content = "Dear " + appointment.getDoctor().getName() + ",\n\n" +
                     "Please be advised that patient " + appointment.getPatientName() + " has cancelled their appointment originally scheduled for " +
@@ -148,10 +160,9 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendPatientStatusUpdate(Appointment appointment) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(appointment.getPatientEmail());
             String friendlyStatus = friendlyStatus(appointment.getStatus());
-            message.setSubject("MundulCare - Your Appointment Was " + friendlyStatus + " (" + appointment.getAppointmentDate() + ")");
+            SimpleMailMessage message = newMessage(appointment.getPatientEmail(),
+                    "MundulCare - Your Appointment Was " + friendlyStatus + " (" + appointment.getAppointmentDate() + ")");
 
             StringBuilder content = new StringBuilder();
             content.append("Dear ").append(appointment.getPatientName()).append(",\n\n");
@@ -176,6 +187,14 @@ public class EmailServiceImpl implements EmailService {
                 content.append("Thank you for visiting MundulCare Hospital. We wish you good health.\n\n");
             } else if (appointment.getStatus() == AppointmentStatus.REJECTED) {
                 content.append("You're welcome to submit a new appointment request for a different date or time.\n\n");
+            } else if (appointment.getStatus() == AppointmentStatus.NO_SHOW) {
+                if (appointment.getPatientUser().isBookingLocked()) {
+                    content.append("Because this is the 2nd missed appointment on your account, booking new appointments " +
+                            "has been temporarily restricted. Please contact hospital administration if you'd like this reviewed.\n\n");
+                } else {
+                    content.append("Please remember to attend or cancel scheduled appointments in advance - repeated " +
+                            "missed visits may restrict your ability to book new appointments.\n\n");
+                }
             }
 
             content.append("You can view the full details anytime under 'My Appointments' on our website.\n\n");
@@ -193,10 +212,9 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendDoctorStatusUpdate(Appointment appointment) {
         try {
-            SimpleMailMessage message = new SimpleMailMessage();
-            message.setTo(appointment.getDoctor().getEmail());
             String friendlyStatus = friendlyStatus(appointment.getStatus());
-            message.setSubject("MundulCare - Appointment " + friendlyStatus + ": " + appointment.getPatientName());
+            SimpleMailMessage message = newMessage(appointment.getDoctor().getEmail(),
+                    "MundulCare - Appointment " + friendlyStatus + ": " + appointment.getPatientName());
 
             StringBuilder content = new StringBuilder();
             content.append("Dear ").append(appointment.getDoctor().getName()).append(",\n\n");

@@ -21,7 +21,7 @@ import {
 import Navbar from '@/components/Navbar';
 import { useAuth } from '@/context/AuthContext';
 import { userApi } from '@/lib/api';
-import { getImageUrl } from '@/lib/imageUrl';
+import Avatar from '@/components/Avatar';
 
 export default function ProfilePage() {
   const { user, isAuthenticated, isLoading: authLoading, updateUser } = useAuth();
@@ -29,6 +29,7 @@ export default function ProfilePage() {
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  const [hasPassword, setHasPassword] = useState(true);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [updatingProfile, setUpdatingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -60,6 +61,7 @@ export default function ProfilePage() {
       if (res.success && res.data) {
         setName(res.data.name || '');
         setPhone(res.data.phone || '');
+        setHasPassword(res.data.hasPassword);
       }
     } catch (err) {
       console.error('Failed to load user profile', err);
@@ -91,10 +93,16 @@ export default function ProfilePage() {
     }
   };
 
+  const isGoogleAccount = user?.authProvider === 'GOOGLE';
+
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       setPasswordMsg({ type: 'error', text: 'New passwords do not match' });
+      return;
+    }
+    if (hasPassword && newPassword === currentPassword) {
+      setPasswordMsg({ type: 'error', text: 'New password must be different from your current password.' });
       return;
     }
 
@@ -102,12 +110,18 @@ export default function ProfilePage() {
     setPasswordMsg(null);
 
     try {
-      const res = await userApi.changePassword({ currentPassword, newPassword });
+      // Accounts that haven't set a password yet (first Google sign-in) have nothing to
+      // verify - once they set one here, they're on the normal current-password flow forever after.
+      const res = await userApi.changePassword({
+        currentPassword: hasPassword ? currentPassword : undefined,
+        newPassword,
+      });
       if (res.success) {
         setPasswordMsg({ type: 'success', text: 'Password changed successfully.' });
         setCurrentPassword('');
         setNewPassword('');
         setConfirmPassword('');
+        setHasPassword(true);
       } else {
         setPasswordMsg({ type: 'error', text: res.message || 'Failed to change password' });
       }
@@ -198,15 +212,7 @@ export default function ProfilePage() {
             <div className="bg-white rounded-2xl border border-slate-200/90 p-6 shadow-xs text-center">
               <div className="relative w-28 h-28 mx-auto mb-4">
                 <div className="w-28 h-28 rounded-full bg-[#fbf5f8] border-2 border-[#edd5e3] flex items-center justify-center font-bold text-3xl text-[#aa5588] overflow-hidden shadow-xs">
-                  {user?.profileImage ? (
-                    <img
-                      src={getImageUrl(user.profileImage)}
-                      alt={user.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    user?.name?.charAt(0).toUpperCase() || 'U'
-                  )}
+                  <Avatar src={user?.profileImage} name={user?.name} />
                 </div>
 
                 {uploadingPhoto && (
@@ -289,7 +295,7 @@ export default function ProfilePage() {
                       required
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] text-sm"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20  text-sm"
                     />
                   </div>
                 </div>
@@ -316,7 +322,7 @@ export default function ProfilePage() {
                       placeholder="+855 12 345 678"
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] text-sm"
+                      className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20  text-sm"
                     />
                   </div>
                 </div>
@@ -357,27 +363,35 @@ export default function ProfilePage() {
               )}
 
               <form onSubmit={handleChangePassword} className="space-y-4 text-sm">
-                <div>
-                  <label className="block font-bold text-slate-700 mb-1.5 text-xs">Current Password</label>
-                  <div className="relative">
-                    <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-                    <input
-                      type={showCurrentPassword ? 'text' : 'password'}
-                      required
-                      placeholder="••••••••"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                {!hasPassword ? (
+                  <div className="p-3 rounded-xl bg-[#fbf5f8] border border-[#edd5e3] text-xs text-[#aa5588]">
+                    {isGoogleAccount
+                      ? "You signed up with Google and don't have a password yet. Set one below to also be able to sign in with your email and password."
+                      : "You don't have a password set yet. Set one below."}
                   </div>
-                </div>
+                ) : (
+                  <div>
+                    <label className="block font-bold text-slate-700 mb-1.5 text-xs">Current Password</label>
+                    <div className="relative">
+                      <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type={showCurrentPassword ? 'text' : 'password'}
+                        required
+                        placeholder="••••••••"
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20  text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                      >
+                        {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1.5 text-xs">New Password (min 8 chars)</label>
@@ -390,7 +404,7 @@ export default function ProfilePage() {
                       placeholder="••••••••"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] text-sm"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20  text-sm"
                     />
                     <button
                       type="button"
@@ -413,7 +427,7 @@ export default function ProfilePage() {
                       placeholder="••••••••"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20 focus:border-[#aa5588] text-sm"
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#aa5588]/20  text-sm"
                     />
                     <button
                       type="button"
@@ -431,7 +445,7 @@ export default function ProfilePage() {
                     disabled={updatingPassword}
                     className="px-5 py-2.5 rounded-xl bg-[#aa5588] hover:bg-[#924472] text-white font-bold text-sm shadow-xs transition-colors cursor-pointer disabled:opacity-50"
                   >
-                    {updatingPassword ? 'Updating...' : 'Update Password'}
+                    {updatingPassword ? 'Saving...' : !hasPassword ? 'Set Password' : 'Update Password'}
                   </button>
                 </div>
               </form>

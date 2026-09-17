@@ -135,6 +135,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .profileImage(user.getProfileImage())
+                .authProvider(user.getAuthProvider())
                 .build();
     }
 
@@ -195,6 +196,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .profileImage(user.getProfileImage())
+                .authProvider(user.getAuthProvider())
                 .build();
     }
 
@@ -247,6 +249,10 @@ public class AuthServiceImpl implements AuthService {
 
         User user = userRepo.findByEmail(request.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found."));
+
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new RuntimeException("New password must be different from your current password.");
+        }
 
         user.setPassword(passwordEncoder.encode(request.getNewPassword()));
         userRepo.save(user);
@@ -304,7 +310,13 @@ public class AuthServiceImpl implements AuthService {
                     .profileImage(claims.get("picture"))
                     .isActive(true)
                     .isVerified(true)
+                    .hasPassword(false)
                     .build();
+            user = userRepo.save(user);
+        } else if ((user.getProfileImage() == null || user.getProfileImage().isBlank()) && claims.get("picture") != null) {
+            // Account already existed (e.g. registered with email/password first) - backfill
+            // their Google photo since they don't have one of their own set yet.
+            user.setProfileImage(claims.get("picture"));
             user = userRepo.save(user);
         }
 
@@ -326,6 +338,7 @@ public class AuthServiceImpl implements AuthService {
                 .email(user.getEmail())
                 .role(user.getRole())
                 .profileImage(user.getProfileImage())
+                .authProvider(user.getAuthProvider())
                 .build();
     }
 

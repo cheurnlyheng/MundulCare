@@ -4,6 +4,7 @@ import etec.project.hospitalAppointmentManagement.Repo.UserRepo;
 import etec.project.hospitalAppointmentManagement.Service.AuditLogService;
 import etec.project.hospitalAppointmentManagement.Service.DoctorService;
 import etec.project.hospitalAppointmentManagement.dto.request.DoctorRequest;
+import etec.project.hospitalAppointmentManagement.dto.request.UpdateDoctorStatusRequest;
 import etec.project.hospitalAppointmentManagement.dto.response.ApiResponse;
 import etec.project.hospitalAppointmentManagement.dto.response.DoctorResponse;
 import etec.project.hospitalAppointmentManagement.entity.User;
@@ -84,6 +85,23 @@ public class DoctorController {
         auditLogService.log(getAdmin(authentication), "UPDATED_DOCTOR", "DOCTOR", id,
                 "Updated doctor profile: " + response.getName());
         return ResponseEntity.ok(ApiResponse.success("Doctor updated successfully", response));
+    }
+
+    @PutMapping("/{id}/status")
+    @Operation(
+            summary = "Activate or deactivate a doctor (Admin)",
+            description = "Toggles visibility for bookings without touching specialties/schedules - works even for a doctor with zero specialties assigned."
+    )
+    public ResponseEntity<ApiResponse<DoctorResponse>> updateDoctorStatus(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateDoctorStatusRequest request
+    ) {
+        DoctorResponse response = doctorService.setActiveStatus(id, request.getActive());
+        auditLogService.log(getAdmin(authentication), request.getActive() ? "ACTIVATED_DOCTOR" : "DEACTIVATED_DOCTOR",
+                "DOCTOR", id, (request.getActive() ? "Activated" : "Deactivated") + " doctor: " + response.getName());
+        return ResponseEntity.ok(ApiResponse.success(
+                request.getActive() ? "Doctor activated successfully" : "Doctor deactivated successfully", response));
     }
 
     @DeleteMapping("/{id}")
