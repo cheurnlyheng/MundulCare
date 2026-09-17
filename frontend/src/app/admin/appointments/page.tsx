@@ -603,7 +603,7 @@ export default function AdminAppointmentsPage() {
               </div>
 
               <p className="text-sm text-slate-600 mb-5 leading-relaxed">
-                This records a strike against the patient's account. They currently have{' '}
+                This records a strike against the patient&apos;s account. They currently have{' '}
                 <strong className="text-slate-900">{noShowTarget.patientNoShowCount}</strong> no-show
                 {noShowTarget.patientNoShowCount === 1 ? '' : 's'} on record.{' '}
                 {noShowTarget.patientNoShowCount + 1 >= 2 ? (
