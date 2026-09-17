@@ -79,6 +79,9 @@ There's no `application.properties` inside the image on purpose (it's gitignored
 | `SPRING_MAIL_PASSWORD` | Gmail [App Password](https://myaccount.google.com/apppasswords) |
 | `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH` | `true` |
 | `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE` | `true` |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT` | `10000` |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT` | `10000` |
+| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT` | `10000` |
 | `JWT_SECRET` | a fresh long random string - **don't reuse your local dev secret** |
 | `JWT_EXPIRATION` | `86400000` (24 hours, in milliseconds) |
 | `GEMINI_API_KEY` | from [Google AI Studio](https://aistudio.google.com/apikey) |

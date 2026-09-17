@@ -41,6 +41,13 @@ spring.mail.password=your_gmail_app_password
 spring.mail.properties.mail.smtp.auth=true
 spring.mail.properties.mail.smtp.starttls.enable=true
 
+# Without these, a blocked/slow outbound SMTP connection (common on cloud hosts that
+# restrict port 587) just hangs indefinitely instead of failing - and since registration
+# sends its OTP email synchronously, that hang blocks the whole HTTP request too.
+spring.mail.properties.mail.smtp.connectiontimeout=10000
+spring.mail.properties.mail.smtp.timeout=10000
+spring.mail.properties.mail.smtp.writetimeout=10000
+
 # JWT Configuration - generate your own random secret, e.g. `openssl rand -hex 32`
 jwt.secret=replace_with_a_long_random_secret
 jwt.expiration=86400000
