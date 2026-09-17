@@ -1,0 +1,11 @@
+target/
+uploads/
+.idea/
+*.iml
+.vscode/
+.git/
+
+# Local secrets never go into the image - every property is supplied as an env var
+# on Render instead (see README's deployment section).
+application.properties
+application-*.properties

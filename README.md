@@ -51,4 +51,40 @@ The app starts on `http://localhost:3000`. Open only this URL in the browser - t
 
 ## Reverse proxy (local dev)
 
-The browser only ever talks to `http://localhost:3000`. `frontend/next.config.ts` rewrites `/api/*` and `/uploads/*` requests to the Spring Boot backend (`http://localhost:8080` by default, override with a `BACKEND_URL` env var). This keeps everything on one origin during development, so the backend's CORS config never comes into play.
+The browser only ever talks to `http://localhost:3000`. `frontend/next.config.ts` rewrites `/api/*` and `/uploads/*` requests to the Spring Boot backend (`http://localhost:8080` by default, override with a `BACKEND_URL` env var). This keeps everything on one origin during development, so the backend's CORS config never comes into play. The same rewrite works in production too - it's not a dev-only trick, just set `BACKEND_URL` to the deployed backend's URL.
+
+## Deploying (Render)
+
+### 1. Database
+
+Create a Render **PostgreSQL** instance. Render gives you the connection details individually (host, port, database, user, password) - use those to build a JDBC URL: `jdbc:postgresql://<host>:<port>/<database>`.
+
+### 2. Backend (Web Service, Docker)
+
+`backend/Dockerfile` builds and runs the jar - no build/start command needed, Render just needs to be pointed at it (root directory: `backend`).
+
+There's no `application.properties` inside the image on purpose (it's gitignored, so it isn't even in the git history Render builds from) - every setting instead comes from an environment variable, using Spring Boot's relaxed binding (`spring.datasource.url` → `SPRING_DATASOURCE_URL`, dots become underscores). Set all of these in the service's Environment tab:
+
+| Env var | Value |
+|---|---|
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://<host>:<port>/<database>` from step 1 |
+| `SPRING_DATASOURCE_USERNAME` | from step 1 |
+| `SPRING_DATASOURCE_PASSWORD` | from step 1 |
+| `SPRING_MAIL_USERNAME` | Gmail address |
+| `SPRING_MAIL_PASSWORD` | Gmail [App Password](https://myaccount.google.com/apppasswords) |
+| `JWT_SECRET` | a fresh long random string - **don't reuse your local dev secret** |
+| `GEMINI_API_KEY` | from [Google AI Studio](https://aistudio.google.com/apikey) |
+| `GOOGLE_CLIENT_ID` | OAuth Client ID (add the deployed frontend URL as an Authorized JavaScript origin too) |
+| `APP_CORS_ALLOWED_ORIGINS` | your deployed frontend URL, e.g. `https://your-frontend.example.com` |
+
+`PORT` is injected by Render automatically - `server.port=${PORT:8080}` already reads it, don't set it yourself.
+
+**Uploaded photos**: Render's filesystem is ephemeral on redeploy/restart unless you attach a paid-tier **persistent disk**. If you add one, mount it (e.g. at `/var/data/uploads`) and set `APP_UPLOAD_DIR=/var/data/uploads`. Without a disk, uploaded doctor/profile photos will be lost on every redeploy - acceptable for a demo, not for real production use.
+
+### 3. Frontend
+
+Any Next.js host works (Vercel is the zero-config option; Render can also run it as a Node web service). Set:
+
+- `BACKEND_URL` - the backend's Render URL (e.g. `https://your-backend.onrender.com`)
+- `NEXT_PUBLIC_API_URL=/api` - unchanged, still routes through the rewrite proxy
+- `NEXT_PUBLIC_GOOGLE_CLIENT_ID` - same Client ID as the backend, with this frontend URL also added as an Authorized JavaScript origin

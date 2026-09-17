@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.NonNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -84,5 +85,14 @@ public class RateLimittingFilter extends OncePerRequestFilter {
             return request.getRemoteAddr();
         }
         return xfHeader.split(",")[0].trim();
+    }
+
+    // Without this, every distinct IP that ever calls a rate-limited endpoint leaves a
+    // permanent entry in the map - a slow memory leak on a long-running instance. Sweep out
+    // anything whose window has already expired.
+    @Scheduled(fixedRate = WINDOW_TIME_MS * 5)
+    void evictExpiredEntries() {
+        long now = System.currentTimeMillis();
+        ipRequestsMap.entrySet().removeIf(entry -> (now - entry.getValue().startTime) > WINDOW_TIME_MS);
     }
 }

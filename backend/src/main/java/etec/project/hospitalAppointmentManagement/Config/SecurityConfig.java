@@ -4,6 +4,7 @@ import etec.project.hospitalAppointmentManagement.Security.JwtAuthenticationFilt
 import etec.project.hospitalAppointmentManagement.Security.MaintenanceModeFilter;
 import etec.project.hospitalAppointmentManagement.Security.RateLimittingFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -31,6 +32,11 @@ public class SecurityConfig {
     private final RateLimittingFilter rateLimittingFilter;
     private final MaintenanceModeFilter maintenanceModeFilter;
 
+    // Comma-separated list of allowed browser origins. Defaults to local dev; set
+    // app.cors.allowed-origins to your real deployed frontend URL(s) in production.
+    @Value("${app.cors.allowed-origins:http://localhost:3000}")
+    private String allowedOrigins;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -44,7 +50,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000")); // Next.js Frontend URL
+        configuration.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
