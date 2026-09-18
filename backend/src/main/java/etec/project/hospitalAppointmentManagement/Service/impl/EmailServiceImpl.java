@@ -7,32 +7,49 @@ import etec.project.hospitalAppointmentManagement.enums.OtpType;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.security.SecureRandom;
+import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class EmailServiceImpl implements EmailService {
 
-    private final JavaMailSender mailSender;
+    // Sends over Resend's HTTPS API instead of raw SMTP - Render (and many other hosts)
+    // blocks outbound SMTP on every port, but nothing blocks outbound HTTPS.
+    private static final String RESEND_API_URL = "https://api.resend.com/emails";
 
-    @Value("${spring.mail.username}")
+    private final RestTemplate restTemplate;
+
+    @Value("${resend.api.key}")
+    private String resendApiKey;
+
+    // onboarding@resend.dev is Resend's shared sandbox sender - works with no setup, but can
+    // only deliver to the Resend account's own email until a custom domain is verified there.
+    @Value("${resend.from.email:MundulCare <onboarding@resend.dev>}")
     private String fromEmail;
 
-    // Gmail lets the SMTP account set any display name on the From header as long as the
-    // address itself matches the authenticated account - without this, recipients see the
-    // raw Gmail account name instead of the hospital's brand.
-    private SimpleMailMessage newMessage(String to, String subject) {
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setFrom("MundulCare <" + fromEmail + ">");
-        message.setTo(to);
-        message.setSubject(subject);
-        return message;
+    private void sendEmail(String to, String subject, String body) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(resendApiKey);
+
+        Map<String, Object> payload = Map.of(
+                "from", fromEmail,
+                "to", List.of(to),
+                "subject", subject,
+                "text", body
+        );
+
+        restTemplate.postForEntity(RESEND_API_URL, new HttpEntity<>(payload, headers), String.class);
     }
 
     @Override
@@ -44,20 +61,21 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendOtpEmail(String toEmail, String otp, OtpType type) {
-        try {
-            SimpleMailMessage message = newMessage(toEmail, null);
+        String subject;
+        String body;
+        if (type == OtpType.EMAIL_VERIFICATION) {
+            subject = "Mundul Care - Account Verification";
+            body = "Welcome to Mundul Care! Your account verification code is:\n" + otp +
+                    "\n\nThis code will expire in 5 minutes.";
+        } else {
+            subject = "Mundul Care - Password Reset Verification";
+            body = "Your verification code for resetting password is:\n" + otp +
+                    "\n\nThis code will expire in 5 minutes." +
+                    "\n\nIf you did not request this code, please secure your account immediately.";
+        }
 
-            if (type == OtpType.EMAIL_VERIFICATION) {
-                message.setSubject("Mundul Care - Account Verification");
-                message.setText("Welcome to Mundul Care! Your account verification code is:\n" + otp +
-                        "\n\nThis code will expire in 5 minutes.");
-            } else if (type == OtpType.PASSWORD_RESET) {
-                message.setSubject("Mundul Care - Password Reset Verification");
-                message.setText("Your verification code for resetting password is:\n" + otp +
-                        "\n\nThis code will expire in 5 minutes." +
-                        "\n\nIf you did not request this code, please secure your account immediately.");
-            }
-            mailSender.send(message);
+        try {
+            sendEmail(toEmail, subject, body);
             log.info("OTP successfully sent to {}", toEmail);
         } catch (Exception e) {
             log.error("Failed to send OTP code to email {}: {}", toEmail, e.getMessage());
@@ -80,9 +98,6 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendAdminBookingNotification(Appointment appointment, String adminEmail) {
         try {
-            SimpleMailMessage message = newMessage(adminEmail,
-                    "MundulCare - New Appointment Pending Review: " + appointment.getPatientName());
-
             String content = "Dear Administrator,\n\n" +
                     "A new appointment request requires your review.\n\n" +
                     "APPOINTMENT DETAILS:\n" +
@@ -97,8 +112,7 @@ public class EmailServiceImpl implements EmailService {
                     "Best regards,\n" +
                     "MundulCare Hospital Automated System";
 
-            message.setText(content);
-            mailSender.send(message);
+            sendEmail(adminEmail, "MundulCare - New Appointment Pending Review: " + appointment.getPatientName(), content);
             log.info("Admin booking notification email sent to {}", adminEmail);
         } catch (Exception e) {
             log.error("Failed to send email to admin: {}", e.getMessage());
@@ -109,12 +123,9 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendPatientBookingConfirmation(Appointment appointment) {
         try {
-            SimpleMailMessage message = newMessage(appointment.getPatientEmail(),
-                    "MundulCare - Appointment Booking Received");
-
             String content = "Dear " + appointment.getPatientName() + ",\n\n" +
                     "Thank you for choosing MundulCare Hospital! Your appointment request has been successfully received.\n" +
-                    "Please wait for our staff to check doctor's availability. \n\n"+
+                    "Please wait for our staff to check doctor's availability. \n\n" +
                     "DETAILS:\n" +
                     "• Doctor: " + appointment.getDoctor().getName() + "\n" +
                     "• Clinic Location: " + (appointment.getDoctor().getAddress() != null ? appointment.getDoctor().getAddress() : "Hospital Main Building") + "\n" +
@@ -126,8 +137,7 @@ public class EmailServiceImpl implements EmailService {
                     "Best regards,\n" +
                     "MundulCare Hospital Team";
 
-            message.setText(content);
-            mailSender.send(message);
+            sendEmail(appointment.getPatientEmail(), "MundulCare - Appointment Booking Received", content);
             log.info("Patient booking confirmation email sent to {}", appointment.getPatientEmail());
         } catch (Exception e) {
             log.error("Failed to send email to patient: {}", e.getMessage());
@@ -138,9 +148,6 @@ public class EmailServiceImpl implements EmailService {
     @Async
     public void sendDoctorCancellationNotification(Appointment appointment) {
         try {
-            SimpleMailMessage message = newMessage(appointment.getDoctor().getEmail(),
-                    "MundulCare - Appointment Cancelled: " + appointment.getPatientName());
-
             String content = "Dear " + appointment.getDoctor().getName() + ",\n\n" +
                     "Please be advised that patient " + appointment.getPatientName() + " has cancelled their appointment originally scheduled for " +
                     appointment.getAppointmentDate() + " at " + appointment.getStartTime() + " - " + appointment.getEndTime() + ".\n\n" +
@@ -148,8 +155,7 @@ public class EmailServiceImpl implements EmailService {
                     "Best regards,\n" +
                     "MundulCare Hospital System";
 
-            message.setText(content);
-            mailSender.send(message);
+            sendEmail(appointment.getDoctor().getEmail(), "MundulCare - Appointment Cancelled: " + appointment.getPatientName(), content);
             log.info("Doctor cancellation email sent to {}", appointment.getDoctor().getEmail());
         } catch (Exception e) {
             log.error("Failed to send cancellation email to doctor: {}", e.getMessage());
@@ -161,8 +167,6 @@ public class EmailServiceImpl implements EmailService {
     public void sendPatientStatusUpdate(Appointment appointment) {
         try {
             String friendlyStatus = friendlyStatus(appointment.getStatus());
-            SimpleMailMessage message = newMessage(appointment.getPatientEmail(),
-                    "MundulCare - Your Appointment Was " + friendlyStatus + " (" + appointment.getAppointmentDate() + ")");
 
             StringBuilder content = new StringBuilder();
             content.append("Dear ").append(appointment.getPatientName()).append(",\n\n");
@@ -200,8 +204,9 @@ public class EmailServiceImpl implements EmailService {
             content.append("You can view the full details anytime under 'My Appointments' on our website.\n\n");
             content.append("Best regards,\nMundulCare Hospital Team");
 
-            message.setText(content.toString());
-            mailSender.send(message);
+            sendEmail(appointment.getPatientEmail(),
+                    "MundulCare - Your Appointment Was " + friendlyStatus + " (" + appointment.getAppointmentDate() + ")",
+                    content.toString());
             log.info("Patient status update email sent to {}", appointment.getPatientEmail());
         } catch (Exception e) {
             log.error("Failed to send status update email to patient: {}", e.getMessage());
@@ -213,8 +218,6 @@ public class EmailServiceImpl implements EmailService {
     public void sendDoctorStatusUpdate(Appointment appointment) {
         try {
             String friendlyStatus = friendlyStatus(appointment.getStatus());
-            SimpleMailMessage message = newMessage(appointment.getDoctor().getEmail(),
-                    "MundulCare - Appointment " + friendlyStatus + ": " + appointment.getPatientName());
 
             StringBuilder content = new StringBuilder();
             content.append("Dear ").append(appointment.getDoctor().getName()).append(",\n\n");
@@ -239,8 +242,9 @@ public class EmailServiceImpl implements EmailService {
 
             content.append("Best regards,\nMundulCare Hospital System");
 
-            message.setText(content.toString());
-            mailSender.send(message);
+            sendEmail(appointment.getDoctor().getEmail(),
+                    "MundulCare - Appointment " + friendlyStatus + ": " + appointment.getPatientName(),
+                    content.toString());
             log.info("Doctor status update email sent to {}", appointment.getDoctor().getEmail());
         } catch (Exception e) {
             log.error("Failed to send status update email to doctor: {}", e.getMessage());

@@ -32,21 +32,14 @@ spring.jpa.properties.hibernate.format_sql=true
 
 spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect
 
-# Email SMTP Configuration (Gmail example)
-# Use a Gmail App Password, not your normal password: https://myaccount.google.com/apppasswords
-spring.mail.host=smtp.gmail.com
-spring.mail.port=587
-spring.mail.username=your_email@gmail.com
-spring.mail.password=your_gmail_app_password
-spring.mail.properties.mail.smtp.auth=true
-spring.mail.properties.mail.smtp.starttls.enable=true
-
-# Without these, a blocked/slow outbound SMTP connection (common on cloud hosts that
-# restrict port 587) just hangs indefinitely instead of failing - and since registration
-# sends its OTP email synchronously, that hang blocks the whole HTTP request too.
-spring.mail.properties.mail.smtp.connectiontimeout=10000
-spring.mail.properties.mail.smtp.timeout=10000
-spring.mail.properties.mail.smtp.writetimeout=10000
+# Email (Resend HTTP API - https://resend.com/api-keys) - sends over HTTPS, not SMTP,
+# because Render (and many other hosts) blocks outbound SMTP on every port. Confirmed by
+# testing both 587 and 465 directly against Render - both time out; only an HTTP-based
+# provider actually gets through.
+resend.api.key=your_resend_api_key
+# onboarding@resend.dev is Resend's shared sandbox sender - works immediately with no setup,
+# but only delivers to the Resend account's own email until you verify a custom domain there.
+resend.from.email=MundulCare <onboarding@resend.dev>
 
 # JWT Configuration - generate your own random secret, e.g. `openssl rand -hex 32`
 jwt.secret=replace_with_a_long_random_secret

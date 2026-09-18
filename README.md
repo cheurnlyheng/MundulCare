@@ -23,7 +23,7 @@ cp src/main/resources/application.properties.example src/main/resources/applicat
 Edit `src/main/resources/application.properties` and fill in:
 
 - `spring.datasource.username` / `spring.datasource.password` - your local PostgreSQL credentials
-- `spring.mail.username` / `spring.mail.password` - a Gmail address and an [App Password](https://myaccount.google.com/apppasswords) (used to send OTP/reset emails)
+- `resend.api.key` - a [Resend](https://resend.com/api-keys) API key (used to send OTP/reset emails over HTTPS)
 - `jwt.secret` - any long random string (e.g. `openssl rand -hex 32`)
 - `gemini.api.key` - a [Google Gemini API key](https://aistudio.google.com/apikey)
 - `google.client.id` - an OAuth Client ID from the [Google Cloud Console](https://console.cloud.google.com/apis/credentials) (Authorized JavaScript origin: `http://localhost:3000`); leave blank to hide the Google Sign-In button
@@ -63,9 +63,7 @@ Create a Render **PostgreSQL** instance. Render gives you the connection details
 
 `backend/Dockerfile` builds and runs the jar - no build/start command needed, Render just needs to be pointed at it (root directory: `backend`).
 
-There's no `application.properties` inside the image on purpose (it's gitignored, so it isn't even in the git history Render builds from) - every setting instead comes from an environment variable, using Spring Boot's relaxed binding (`spring.datasource.url` → `SPRING_DATASOURCE_URL`, dots become underscores). Set all of these in the service's Environment tab:
-
-`application.properties` is gitignored, so it isn't in the image at all - **every single line of `application.properties.example` needs an equivalent env var below**, not just the secret-looking ones. Anything left unset falls back to Spring Boot's own generic default, which for several of these (mail, multipart size) isn't what the app actually needs to function correctly.
+`application.properties` is gitignored, so it isn't in the image at all - **every single line of `application.properties.example` needs an equivalent env var below**, not just the secret-looking ones, using Spring Boot's relaxed binding (`spring.datasource.url` → `SPRING_DATASOURCE_URL`, dots become underscores). Anything left unset falls back to Spring Boot's own generic default, which for several of these (multipart size) isn't what the app actually needs to function correctly.
 
 | Env var | Value |
 |---|---|
@@ -73,15 +71,8 @@ There's no `application.properties` inside the image on purpose (it's gitignored
 | `SPRING_DATASOURCE_USERNAME` | from step 1 |
 | `SPRING_DATASOURCE_PASSWORD` | from step 1 |
 | `SPRING_JPA_HIBERNATE_DDL_AUTO` | `validate` |
-| `SPRING_MAIL_HOST` | `smtp.gmail.com` |
-| `SPRING_MAIL_PORT` | `587` |
-| `SPRING_MAIL_USERNAME` | Gmail address |
-| `SPRING_MAIL_PASSWORD` | Gmail [App Password](https://myaccount.google.com/apppasswords) |
-| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH` | `true` |
-| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE` | `true` |
-| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_CONNECTIONTIMEOUT` | `10000` |
-| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_TIMEOUT` | `10000` |
-| `SPRING_MAIL_PROPERTIES_MAIL_SMTP_WRITETIMEOUT` | `10000` |
+| `RESEND_API_KEY` | from [resend.com/api-keys](https://resend.com/api-keys) - **email is sent over this HTTP API, not SMTP**, since Render (confirmed by testing) blocks outbound SMTP on every port |
+| `RESEND_FROM_EMAIL` | `MundulCare <onboarding@resend.dev>` unless you've verified your own domain in Resend |
 | `JWT_SECRET` | a fresh long random string - **don't reuse your local dev secret** |
 | `JWT_EXPIRATION` | `86400000` (24 hours, in milliseconds) |
 | `GEMINI_API_KEY` | from [Google AI Studio](https://aistudio.google.com/apikey) |
