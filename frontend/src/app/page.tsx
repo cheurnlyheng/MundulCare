@@ -38,8 +38,8 @@ function getSpecialtyIcon(name: string) {
 // Placeholder team roster - swap names, roles, and images once real staff photos are ready
 const TEAM_MEMBERS = [
   { name: 'Mr. Cheurn Lyheng', role: 'Backend Dev', image: '/team-image/me2.png' },
-  { name: 'Mr. Chhan Philip', role: 'Frontend Dev', image: '/team-image/2.png' },
-  { name: 'Mr. Hong Mengyu', role: 'Software Tester', image: '/team-image/3.png' },
+  { name: 'Mr. Chhan Philip', role: 'Frontend Dev', image: '/team-image/3.png' },
+  { name: 'Mr. Hong Mengyu', role: 'Software Tester', image: '/team-image/2.png' },
 ];
 
 export default function HomePage() {
