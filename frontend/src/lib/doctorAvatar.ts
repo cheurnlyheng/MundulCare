@@ -41,7 +41,7 @@ export function getDoctorAvatarUrl(doctorName: string, doctorId?: number, upload
   // Always prefer a real uploaded photo - hardcoded stock portraits below are only a
   // fallback for doctors with no photo on file (external URLs can go stale/404 anytime).
   if (uploadedImage) {
-    const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api').replace(/\/api\/?$/, '');
+    const backendOrigin = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api').replace(/\/(api|mundulcare)\/?$/, '');
     if (uploadedImage.startsWith('http://') || uploadedImage.startsWith('https://')) return uploadedImage;
     return `${backendOrigin}${uploadedImage}`;
   }

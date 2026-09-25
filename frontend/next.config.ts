@@ -8,8 +8,8 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: '/api/:path*',
-        destination: `${BACKEND_URL}/api/:path*`, // Forward to Spring Boot
+        source: '/mundulcare/:path*',
+        destination: `${BACKEND_URL}/api/:path*`, // Public /mundulcare/* maps to the backend's /api/*
       },
       {
         source: '/uploads/:path*',

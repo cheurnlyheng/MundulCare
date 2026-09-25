@@ -45,13 +45,13 @@ npm install
 npm run dev
 ```
 
-Fill in `NEXT_PUBLIC_GOOGLE_CLIENT_ID` with the same Client ID used on the backend (leave blank to hide the Google button). Leave `NEXT_PUBLIC_API_URL` as `/api` - the Next.js dev server proxies it to the backend (see "Reverse proxy" below); only change it if the backend isn't running at `http://localhost:8080`, in which case set `BACKEND_URL` instead.
+Fill in `NEXT_PUBLIC_GOOGLE_CLIENT_ID` with the same Client ID used on the backend (leave blank to hide the Google button). Leave `NEXT_PUBLIC_API_URL` as `/mundulcare` - the Next.js dev server proxies it to the backend (see "Reverse proxy" below); only change it if the backend isn't running at `http://localhost:8080`, in which case set `BACKEND_URL` instead.
 
 The app starts on `http://localhost:3000`. Open only this URL in the browser - the frontend and backend are both reachable through it.
 
 ## Reverse proxy (local dev)
 
-The browser only ever talks to `http://localhost:3000`. `frontend/next.config.ts` rewrites `/api/*` and `/uploads/*` requests to the Spring Boot backend (`http://localhost:8080` by default, override with a `BACKEND_URL` env var). This keeps everything on one origin during development, so the backend's CORS config never comes into play. The same rewrite works in production too - it's not a dev-only trick, just set `BACKEND_URL` to the deployed backend's URL.
+The browser only ever talks to `http://localhost:3000`. `frontend/next.config.ts` rewrites `/mundulcare/*` (to the backend's `/api/*`) and `/uploads/*` requests to the Spring Boot backend (`http://localhost:8080` by default, override with a `BACKEND_URL` env var). This keeps everything on one origin during development, so the backend's CORS config never comes into play. The same rewrite works in production too - it's not a dev-only trick, just set `BACKEND_URL` to the deployed backend's URL.
 
 ## Deploying (Render)
 
@@ -92,5 +92,5 @@ Create a Render **PostgreSQL** instance. Render gives you the connection details
 Any Next.js host works (Vercel is the zero-config option; Render can also run it as a Node web service). Set:
 
 - `BACKEND_URL` - the backend's Render URL (e.g. `https://your-backend.onrender.com`)
-- `NEXT_PUBLIC_API_URL=/api` - unchanged, still routes through the rewrite proxy
+- `NEXT_PUBLIC_API_URL=/mundulcare` - routes through the rewrite proxy (must match the `source` in `next.config.ts`; baked in at build time, so redeploy after changing it)
 - `NEXT_PUBLIC_GOOGLE_CLIENT_ID` - same Client ID as the backend, with this frontend URL also added as an Authorized JavaScript origin
