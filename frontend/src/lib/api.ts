@@ -296,7 +296,9 @@ export const auditLogApi = {
 // 8. System Settings API (maintenance mode)
 export const settingsApi = {
   getMaintenanceStatus: async (): Promise<ApiResponse<MaintenanceStatus>> => {
-    const res = await api.get<ApiResponse<MaintenanceStatus>>('/settings/maintenance');
+    // MaintenanceGate renders nothing until this resolves, so a sleeping backend (Render free
+    // tier cold start) must not be able to hang it - time out and let the gate fail open.
+    const res = await api.get<ApiResponse<MaintenanceStatus>>('/settings/maintenance', { timeout: 5000 });
     return res.data;
   },
 
