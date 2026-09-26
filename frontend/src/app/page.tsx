@@ -73,18 +73,23 @@ export default function HomePage() {
     <div className="min-h-screen bg-slate-50/50 flex flex-col selection:bg-[#aa5588] selection:text-white">
       <Navbar />
 
-      {/* 1. Hero Section - Full-bleed hospital banner with text overlaid on top */}
-      <section className="relative min-h-130 sm:min-h-150 lg:min-h-165 h-[calc(100svh-4rem)] overflow-hidden">
+      {/* 1. Hero Section - Tall full-bleed banner. The text block below is sticky, so it stays
+          in view (pinned under the navbar) while the photo scrolls behind it. Don't add
+          overflow-hidden to this section: it would stop the sticky text from pinning. */}
+      <section className="relative w-full h-[160svh] sm:h-[175svh]">
         <img
           src="/banner/photo_2026-09-02_21-04-07.jpg"
           alt="MundulCare Hospital Building"
-          className="absolute inset-0 w-full h-full object-cover object-[80%_center] md:object-[68%_center] lg:object-center"
+          fetchPriority="high"
+          className="absolute inset-0 w-full h-full object-cover object-[80%_top] md:object-[75%_top] lg:object-[85%_top]"
         />
         {/* Scrim so the overlaid text stays readable regardless of what's behind it */}
         <div className="absolute inset-0 bg-linear-to-r from-slate-950/55 via-slate-950/30 to-slate-950/5" />
         <div className="absolute inset-0 bg-linear-to-t from-slate-950/30 via-transparent to-transparent" />
 
-        <div className="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+        {/* Pinned just below the 4rem sticky navbar. On very short screens (phones held
+            sideways) it falls back to normal flow so the text can't get stuck cut off. */}
+        <div className="sticky top-16 z-10 h-[calc(100svh-4rem)] min-h-130 [@media(max-height:36.5rem)]:static max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
           <div className="max-w-xl space-y-6">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-[1.15]">
               Modern Medical Care, <br />
